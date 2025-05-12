@@ -9,6 +9,7 @@ import './styles.css';
 
 const App = () => {
   // 기존 상태들
+  const [myPosition, setMyPosition] = useState(null);
   const [radius, setRadius] = useState(2000);
   const [address, setAddress] = useState('');
   const [restaurants, setRestaurants] = useState([]);
@@ -200,7 +201,8 @@ const App = () => {
         </div>
       )}
 
-      <MapComponent mapLoaded={mapLoaded} mapCenter={mapCenter} restaurants={restaurants} radius={radius} />
+      <MapComponent mapLoaded={mapLoaded}  mapCenter={mapCenter} restaurants={restaurants} radius={radius} myPosition={myPosition}/>
+
       <RestaurantList restaurants={restaurants} onSelect={handleSelectRestaurant} />
 
       <div style={{ textAlign: 'center', margin: '10px 0' }}>
