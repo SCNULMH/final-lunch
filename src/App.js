@@ -145,21 +145,23 @@ const App = () => {
     }
   };
 
-  const handleLocationClick = async () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        setMapCenter({ lat, lng });
-        await fetchNearbyRestaurants(lng, lat);
-      }, (error) => {
-        console.error('위치를 가져오지 못했습니다: ', error);
-        alert('위치를 가져오지 못했습니다.');
-      });
-    } else {
-      alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
-    }
-  };
+ const handleLocationClick = async () => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      setMapCenter({ lat, lng });
+      setMyPosition({ lat, lng }); // ★ 이 줄을 추가하세요!
+      await fetchNearbyRestaurants(lng, lat);
+    }, (error) => {
+      console.error('위치를 가져오지 못했습니다: ', error);
+      alert('위치를 가져오지 못했습니다.');
+    });
+  } else {
+    alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
+  }
+};
+
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -184,11 +186,16 @@ const App = () => {
 
       <RadiusInput setRadius={setRadius} />
       <input
-        type="text"
-        placeholder="주소 또는 건물명 입력"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-      />
+          type="text"
+          placeholder="주소 또는 건물명 입력"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch();
+            }
+          }}
+/>
       <button onClick={handleSearch}>검색</button>
       
       {searchResults.length > 0 && (
