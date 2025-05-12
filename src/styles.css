@@ -70,3 +70,29 @@ button {
     font-weight: bold;
     color: #333;
 }
+
+@media only screen and (max-width: 600px) {
+  .container {
+    max-width: 100%;
+    padding: 4px;         /* 패딩 더 줄임 */
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .scrollable-list, #restaurantList {
+    max-height: 45vh;     /* 높이 조금 더 줄임 */
+    font-size: 0.95em;    /* 폰트 살짝 줄임 */
+    padding: 3px;         /* 패딩 더 줄임 */
+    margin-top: 6px;      /* 마진도 줄임 */
+  }
+  input, button {
+    width: 100%;
+    font-size: 1em;       /* 폰트 줄임 */
+    padding: 8px;         /* 패딩 줄임 */
+    margin: 6px 0;        /* 마진 줄임 */
+    box-sizing: border-box;
+  }
+  .result {
+    font-size: 1em;       /* 폰트 줄임 */
+    margin: 10px 0;       /* 마진 줄임 */
+  }
+}
