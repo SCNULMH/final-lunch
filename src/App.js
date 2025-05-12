@@ -1,10 +1,14 @@
+// src/App.js
+
 import React, { useState, useEffect } from 'react';
 import MapComponent from './MapComponent';
 import RestaurantList from './RestaurantList';
 import RadiusInput from './RadiusInput';
+import AuthModal from './AuthModal';
 import './styles.css';
 
 const App = () => {
+  // 기존 상태들
   const [radius, setRadius] = useState(2000);
   const [address, setAddress] = useState('');
   const [restaurants, setRestaurants] = useState([]);
@@ -16,8 +20,17 @@ const App = () => {
   const [mapCenter, setMapCenter] = useState({ lat: 34.9687735, lng: 127.4802359 });
   const [searchResults, setSearchResults] = useState([]);
 
+  // 인증 모달 상태
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+
   const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
   const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
+
+  // 인증 처리 (실제 서비스에서는 서버 연동 필요)
+  const handleAuthSubmit = (credentials) => {
+    alert(`${authMode === 'login' ? '로그인' : '회원가입'} 정보:\n이메일: ${credentials.email}\n비밀번호: ${credentials.password}`);
+  };
 
   const fetchAddressData = async (query) => {
     const addressUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}`;
@@ -91,14 +104,14 @@ const App = () => {
       alert("주소를 입력해 주세요.");
       return;
     }
-    await fetchAddressData(address); // 주소 및 건물 검색 실행
+    await fetchAddressData(address);
   };
 
   const handleSelectAddress = (result) => {
-    setAddress(result.address_name); // 선택한 주소 설정
-    setMapCenter({ lat: parseFloat(result.y), lng: parseFloat(result.x) }); // 지도 중심 설정
-    fetchNearbyRestaurants(result.x, result.y); // 근처 식당 검색
-    setSearchResults([]); // 검색 결과 초기화
+    setAddress(result.address_name);
+    setMapCenter({ lat: parseFloat(result.y), lng: parseFloat(result.x) });
+    fetchNearbyRestaurants(result.x, result.y);
+    setSearchResults([]);
   };
 
   const handleSelectRestaurant = (restaurant) => {
@@ -159,7 +172,15 @@ const App = () => {
 
   return (
     <div className="container">
-      <h1>식당 추천 앱</h1>
+      {/* 상단 헤더 */}
+      <div className="header">
+        <h1>식당 추천 앱</h1>
+        <div className="auth-buttons">
+          <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>로그인</button>
+          <button onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}>회원가입</button>
+        </div>
+      </div>
+
       <RadiusInput setRadius={setRadius} />
       <input
         type="text"
@@ -173,7 +194,7 @@ const App = () => {
         <div className="scrollable-list">
           {searchResults.map((result, index) => (
             <div key={index} onClick={() => handleSelectAddress(result)}>
-              {result.address_name} ({result.place_name})
+              {result.address_name} {result.place_name ? `(${result.place_name})` : ''}
             </div>
           ))}
         </div>
@@ -191,7 +212,7 @@ const App = () => {
           type="number"
           placeholder="추천 개수"
           value={count || ''} // count가 0일 때는 빈 문자열로 설정
-          onChange={(e) => setCount(Number(e.target.value) || 0)} // Number로 변환하고, falsy 값일 경우 0으로 설정
+          onChange={(e) => setCount(Number(e.target.value) || 0)}
         />
         <button style={{ width: '210px' }} onClick={handleSpin}>랜덤 추천</button>
       </div>
@@ -201,15 +222,23 @@ const App = () => {
           type="text"
           placeholder="추천할 카테고리 (예: 한식)"
           value={includedCategory}
-          onChange={(e) => setIncludedCategory(e.target.value || '')} // 빈 문자열 처리
+          onChange={(e) => setIncludedCategory(e.target.value || '')}
         />
         <input
           type="text"
           placeholder="제외할 카테고리 (쉼표로 구분)"
           value={excludedCategory}
-          onChange={(e) => setExcludedCategory(e.target.value || '')} // 빈 문자열 처리
+          onChange={(e) => setExcludedCategory(e.target.value || '')}
         />
       </div>
+
+      {/* 인증 모달 */}
+      <AuthModal
+        mode={authMode}
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSubmit={handleAuthSubmit}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-/* 기본 스타일 */
+/* ===== 기본 레이아웃 ===== */
 body {
   font-family: Arial, sans-serif;
   display: flex;
@@ -10,7 +10,33 @@ body {
   background-color: #f4f4f9;
 }
 
-/* 공통 컨테이너 */
+/* ===== 헤더 및 인증 버튼 ===== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  width: 100%;
+}
+.auth-buttons {
+  display: flex;
+  gap: 10px;
+}
+.auth-buttons button {
+  background: #388E3C;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.auth-buttons button:hover {
+  background: #2e7031;
+}
+
+/* ===== 컨테이너 ===== */
 .container {
   text-align: center;
   max-width: 600px;
@@ -20,7 +46,7 @@ body {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-/* 입력 요소 & 버튼 */
+/* ===== 입력 & 버튼 ===== */
 input, button {
   margin: 10px;
   padding: 10px;
@@ -28,14 +54,17 @@ input, button {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
-
 button {
   cursor: pointer;
   background-color: #4CAF50;
   color: white;
+  transition: background 0.2s;
+}
+button:hover {
+  background-color: #388E3C;
 }
 
-/* 스크롤 리스트 공통 스타일 */
+/* ===== 스크롤 리스트 ===== */
 .scrollable-list,
 #restaurantList {
   max-height: 300px;
@@ -47,7 +76,7 @@ button {
   background-color: #f9f9f9;
 }
 
-/* 검색 결과 아이템 */
+/* ===== 검색 결과 항목 ===== */
 .search-result-item {
   padding: 10px;
   cursor: pointer;
@@ -57,7 +86,7 @@ button {
 .search-result-item:last-child { border-bottom: none; }
 .search-result-item:hover { background-color: #e0e0e0; }
 
-/* 식당 카드 스타일 */
+/* ===== 식당 카드 ===== */
 .restaurant-card {
   background: #fff;
   border-radius: 10px;
@@ -76,8 +105,6 @@ button {
   box-shadow: 0 4px 16px rgba(0,0,0,0.13);
   transform: translateY(-2px) scale(1.01);
 }
-
-/* 카드 내부 요소 */
 .restaurant-title {
   font-weight: bold;
   font-size: 1.13em;
@@ -89,7 +116,7 @@ button {
   margin-bottom: 3px;
 }
 
-/* 북마크 관련 스타일 */
+/* ===== 북마크 버튼 ===== */
 .bookmark-btn {
   background: none;
   border: none;
@@ -106,7 +133,7 @@ button {
 .bookmark-btn[aria-label="북마크 해제"] { color: #FFD600; }
 .bookmark-btn:focus { outline: 2px solid #4CAF50; }
 
-/* 상세보기 버튼 */
+/* ===== 상세보기 버튼 ===== */
 .detail-btn {
   margin-top: 8px;
   padding: 7px 14px;
@@ -119,14 +146,23 @@ button {
   align-self: flex-end;
   transition: background 0.2s;
 }
-.detail-btn:hover, 
-.detail-btn:active { background: #388E3C; }
+.detail-btn:hover, .detail-btn:active {
+  background: #388E3C;
+}
 
-/* 북마크 관리 페이지 */
+/* ===== 북마크 관리 ===== */
 .bookmark-container {
   max-width: 600px;
   margin: 0 auto;
   padding: 16px;
+}
+.like-btn {
+  font-size: 1.3em;
+  transition: color 0.2s;
+}
+.dislike-btn {
+  font-size: 1.3em;
+  transition: color 0.2s;
 }
 .recommend-card {
   background: #fffbe7;
@@ -139,7 +175,70 @@ button {
   font-weight: bold;
 }
 
-/* 모바일 반응형 */
+/* ===== 인증 모달 ===== */
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.auth-modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 32px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  min-width: 320px;
+  max-width: 90vw;
+}
+.auth-modal h2 {
+  margin-top: 0;
+}
+.auth-modal input {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+  padding: 10px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.auth-modal .auth-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.auth-modal button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.auth-modal button[type="submit"] {
+  background: #4CAF50;
+  color: white;
+}
+.auth-modal button[type="button"] {
+  background: #666;
+  color: white;
+}
+.auth-modal button:hover {
+  opacity: 0.85;
+}
+
+/* ===== 결과 텍스트 ===== */
+.result {
+  margin: 15px 0;
+  font-weight: bold;
+  color: #333;
+}
+
+/* ===== 모바일 반응형 ===== */
 @media only screen and (max-width: 600px) {
   .container {
     max-width: 100%;
@@ -147,34 +246,27 @@ button {
     border-radius: 0;
     box-shadow: none;
   }
-  
-  .scrollable-list, 
-  #restaurantList {
+  .header { flex-direction: column; gap: 8px; }
+  .scrollable-list, #restaurantList {
     max-height: 45vh;
     font-size: 0.95em;
     padding: 3px;
     margin-top: 6px;
   }
-
-  input, 
-  button {
+  input, button {
     width: 100%;
     font-size: 1em;
     padding: 8px;
     margin: 6px 0;
     box-sizing: border-box;
   }
-
   .restaurant-card {
     padding: 10px 8px;
     margin-bottom: 8px;
     border-radius: 7px;
   }
-
   .restaurant-title { font-size: 1em; }
   .restaurant-meta { font-size: 0.93em; }
-  .detail-btn { 
-    font-size: 0.93em;
-    padding: 6px 10px;
-  }
+  .detail-btn { font-size: 0.93em; padding: 6px 10px; }
+  .auth-modal { min-width: 90vw; padding: 18px 6px; }
 }
