@@ -75,30 +75,42 @@ const App = () => {
     }
   };
 
-  // 근처 식당 검색
-  const fetchNearbyRestaurants = async (x, y) => {
-    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=식당&x=${x}&y=${y}&radius=${radius}`;
-
+ // 근처 식당 검색 (모든 페이지 요청)
+const fetchNearbyRestaurants = async (x, y) => {
+  let allRestaurants = [];
+  
+  // 1페이지부터 3페이지까지 요청
+  for (let page = 1; page <= 3; page++) {
+    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=식당&x=${x}&y=${y}&radius=${radius}&page=${page}`;
+    
     try {
       const response = await fetch(url, {
         headers: { Authorization: `KakaoAK ${REST_API_KEY}` },
       });
 
-      if (!response.ok) {
-        throw new Error(`식당 검색 실패: ${response.status} ${response.statusText}`);
-      }
+      if (!response.ok) break; // 오류 발생 시 중단
 
       const data = await response.json();
       if (data.documents && data.documents.length > 0) {
-        setRestaurants(data.documents);
+        allRestaurants = [...allRestaurants, ...data.documents];
+        // 현재 페이지 결과가 15개 미만이면 더 이상 페이지 요청 X
+        if (data.documents.length < 15) break;
       } else {
-        alert("근처에 식당이 없습니다.");
+        break; // 결과 없으면 중단
       }
     } catch (error) {
-      console.error("식당 검색 중 오류 발생:", error);
-      alert("식당 검색 중 오류가 발생했습니다.");
+      console.error("페이지 요청 실패:", error);
+      break;
     }
-  };
+  }
+
+  if (allRestaurants.length > 0) {
+    setRestaurants(allRestaurants);
+  } else {
+    alert("근처에 식당이 없습니다.");
+  }
+};
+
 
   // 주소 검색 실행
   const handleSearch = async () => {
