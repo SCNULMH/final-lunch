@@ -1,5 +1,3 @@
-// src/App.js
-
 import React, { useState, useEffect } from 'react';
 import MapComponent from './MapComponent';
 import RestaurantList from './RestaurantList';
@@ -22,6 +20,7 @@ const App = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
+  const [noIncludedMessage, setNoIncludedMessage] = useState(""); // 안내 메시지 상태 추가
 
   const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
   const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
@@ -41,7 +40,6 @@ const App = () => {
         fetch(addressUrl, { headers: { Authorization: `KakaoAK ${REST_API_KEY}` } }),
         fetch(keywordUrl, { headers: { Authorization: `KakaoAK ${REST_API_KEY}` } }),
       ]);
-
       if (!addressResponse.ok || !keywordResponse.ok) {
         throw new Error(`검색 실패: ${addressResponse.status} ${addressResponse.statusText}`);
       }
@@ -75,42 +73,34 @@ const App = () => {
     }
   };
 
- // 근처 식당 검색 (모든 페이지 요청)
-const fetchNearbyRestaurants = async (x, y) => {
-  let allRestaurants = [];
-  
-  // 1페이지부터 3페이지까지 요청
-  for (let page = 1; page <= 3; page++) {
-    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=식당&x=${x}&y=${y}&radius=${radius}&page=${page}`;
-    
-    try {
-      const response = await fetch(url, {
-        headers: { Authorization: `KakaoAK ${REST_API_KEY}` },
-      });
-
-      if (!response.ok) break; // 오류 발생 시 중단
-
-      const data = await response.json();
-      if (data.documents && data.documents.length > 0) {
-        allRestaurants = [...allRestaurants, ...data.documents];
-        // 현재 페이지 결과가 15개 미만이면 더 이상 페이지 요청 X
-        if (data.documents.length < 15) break;
-      } else {
-        break; // 결과 없으면 중단
+  // 근처 식당 검색 (모든 페이지 요청)
+  const fetchNearbyRestaurants = async (x, y) => {
+    let allRestaurants = [];
+    for (let page = 1; page <= 3; page++) {
+      const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=식당&x=${x}&y=${y}&radius=${radius}&page=${page}`;
+      try {
+        const response = await fetch(url, {
+          headers: { Authorization: `KakaoAK ${REST_API_KEY}` },
+        });
+        if (!response.ok) break;
+        const data = await response.json();
+        if (data.documents && data.documents.length > 0) {
+          allRestaurants = [...allRestaurants, ...data.documents];
+          if (data.documents.length < 15) break;
+        } else {
+          break;
+        }
+      } catch (error) {
+        console.error("페이지 요청 실패:", error);
+        break;
       }
-    } catch (error) {
-      console.error("페이지 요청 실패:", error);
-      break;
     }
-  }
-
-  if (allRestaurants.length > 0) {
-    setRestaurants(allRestaurants);
-  } else {
-    alert("근처에 식당이 없습니다.");
-  }
-};
-
+    if (allRestaurants.length > 0) {
+      setRestaurants(allRestaurants);
+    } else {
+      alert("근처에 식당이 없습니다.");
+    }
+  };
 
   // 주소 검색 실행
   const handleSearch = async () => {
@@ -135,60 +125,66 @@ const fetchNearbyRestaurants = async (x, y) => {
   };
 
   // 랜덤 추천 (포함/제외 카테고리, 5개 랜덤)
-  // src/App.js (handleSpin 함수 부분만 발췌)
+  const handleSpin = () => {
+    if (restaurants.length === 0) {
+      alert("식당 목록이 비어 있습니다. 주소를 검색해 주세요.");
+      return;
+    }
 
-const handleSpin = () => {
-  if (restaurants.length === 0) {
-    alert("식당 목록이 비어 있습니다. 주소를 검색해 주세요.");
-    return;
-  }
+    const excludedCategories = excludedCategory
+      .split(',')
+      .map((cat) => cat.trim())
+      .filter((cat) => cat.length > 0);
+    const included = includedCategory.trim();
 
-  const excludedCategories = excludedCategory
-    .split(',')
-    .map((cat) => cat.trim())
-    .filter((cat) => cat.length > 0);
-
-  const included = includedCategory.trim();
-
-  // 필터링 로직 개선
-  const filteredRestaurants = restaurants.filter((restaurant) => {
-    const isExcluded = excludedCategories.length > 0 
-      ? excludedCategories.some(cat => restaurant.category_name.includes(cat))
-      : false;
-    const isIncluded = included.length > 0 
-      ? restaurant.category_name.includes(included)
-      : true;
-    return !isExcluded && isIncluded;
-  });
-
-  let finalSelection = [];
-  if (filteredRestaurants.length === 0) {
-    // 필터 결과 없을 때 전체에서 제외만 적용
-    const notExcluded = restaurants.filter((restaurant) => {
-      const isExcluded = excludedCategories.some(cat => 
-        restaurant.category_name.includes(cat)
-      );
-      return !isExcluded;
+    // 1. 필터링: 제외 카테고리, 포함 카테고리
+    const filteredRestaurants = restaurants.filter((restaurant) => {
+      const isExcluded = excludedCategories.length > 0
+        ? excludedCategories.some(cat => restaurant.category_name.includes(cat))
+        : false;
+      const isIncluded = included.length > 0
+        ? restaurant.category_name.includes(included)
+        : true;
+      return !isExcluded && isIncluded;
     });
-    finalSelection = notExcluded;
-  } else {
-    finalSelection = filteredRestaurants;
-  }
 
-  // 랜덤 추천 (count 값이 없으면 기본 5개)
-  const randomSelection = finalSelection
-    .sort(() => 0.5 - Math.random())
-    .slice(0, count || 5);
+    // 2. 최종 후보 결정
+    let finalSelection = [];
+    let message = "";
 
-  setRestaurants(randomSelection);
-  if (randomSelection.length > 0) {
-    setMapCenter({
-      lat: parseFloat(randomSelection[0].y),
-      lng: parseFloat(randomSelection[0].x),
-    });
-  }
-};
+    if (filteredRestaurants.length === 0) {
+      // 2-1. 포함 카테고리 음식점이 없을 때
+      if (included) {
+        message = `"${included}" 음식점이 주변에 없어 랜덤 음식점을 안내합니다.`;
+      }
+      // 제외 카테고리만 적용해서 전체에서 랜덤 추출
+      const notExcluded = restaurants.filter((restaurant) => {
+        const isExcluded = excludedCategories.some(cat =>
+          restaurant.category_name.includes(cat)
+        );
+        return !isExcluded;
+      });
+      finalSelection = notExcluded;
+    } else {
+      // 2-2. 정상적으로 필터된 경우
+      finalSelection = filteredRestaurants;
+    }
 
+    setNoIncludedMessage(message); // 안내 메시지 상태에 저장
+
+    // 랜덤 추천 (count 값이 없으면 기본 5개)
+    const randomSelection = finalSelection
+      .sort(() => 0.5 - Math.random())
+      .slice(0, count || 5);
+
+    setRestaurants(randomSelection);
+    if (randomSelection.length > 0) {
+      setMapCenter({
+        lat: parseFloat(randomSelection[0].y),
+        lng: parseFloat(randomSelection[0].x),
+      });
+    }
+  };
 
   // 현위치 버튼 클릭
   const handleLocationClick = async () => {
@@ -230,21 +226,20 @@ const handleSpin = () => {
         </div>
       </div>
 
-      
-          <div className="search-row">
-      <input
-        type="text"
-        placeholder="주소 또는 건물명 입력"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            handleSearch();
-          }
-        }}
-      />
-      <button onClick={handleSearch}>검색</button>
-    </div>
+      <div className="search-row">
+        <input
+          type="text"
+          placeholder="주소 또는 건물명 입력"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch();
+            }
+          }}
+        />
+        <button onClick={handleSearch}>검색</button>
+      </div>
       
       {searchResults.length > 0 && (
         <div className="scrollable-list">
@@ -264,15 +259,22 @@ const handleSpin = () => {
         myPosition={myPosition}
       />
 
+      {/* 안내 메시지 표시 */}
+      {noIncludedMessage && (
+        <div className="result-message">{noIncludedMessage}</div>
+      )}
+
       <RestaurantList restaurants={restaurants} onSelect={handleSelectRestaurant} />
 
       <div style={{ textAlign: 'center', margin: '10px 0' }}>
         <button onClick={handleLocationClick}>현위치</button>
       </div>
       <RadiusInput setRadius={setRadius} />
+
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <input
           type="number"
+          className="recommend-count"
           placeholder="추천 개수"
           value={count || ''}
           onChange={(e) => setCount(Number(e.target.value) || 0)}
