@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import MapComponent from './MapComponent';
 import RestaurantList from './RestaurantList';
 import RadiusInput from './RadiusInput';
-import AuthModal from './AuthModal';
+import AuthModal from './components/AuthModal';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './firebase';
 import './styles.css';
 
 const App = () => {
@@ -20,14 +22,23 @@ const App = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
-  const [noIncludedMessage, setNoIncludedMessage] = useState(""); // 안내 메시지 상태 추가
+  const [noIncludedMessage, setNoIncludedMessage] = useState(""); // 안내 메시지
+  const [user, setUser] = useState(null); // Firebase 로그인 유저
 
   const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
   const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
 
-  // 인증 처리 (실제 서비스에서는 서버 연동 필요)
-  const handleAuthSubmit = (credentials) => {
-    alert(`${authMode === 'login' ? '로그인' : '회원가입'} 정보:\n이메일: ${credentials.email}\n비밀번호: ${credentials.password}`);
+  // Firebase 로그인 상태 감지
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 로그아웃
+  const handleLogout = async () => {
+    await signOut(auth);
   };
 
   // 주소 및 키워드 검색
@@ -153,11 +164,9 @@ const App = () => {
     let message = "";
 
     if (filteredRestaurants.length === 0) {
-      // 2-1. 포함 카테고리 음식점이 없을 때
       if (included) {
         message = `"${included}" 음식점이 주변에 없어 랜덤 음식점을 안내합니다.`;
       }
-      // 제외 카테고리만 적용해서 전체에서 랜덤 추출
       const notExcluded = restaurants.filter((restaurant) => {
         const isExcluded = excludedCategories.some(cat =>
           restaurant.category_name.includes(cat)
@@ -166,11 +175,10 @@ const App = () => {
       });
       finalSelection = notExcluded;
     } else {
-      // 2-2. 정상적으로 필터된 경우
       finalSelection = filteredRestaurants;
     }
 
-    setNoIncludedMessage(message); // 안내 메시지 상태에 저장
+    setNoIncludedMessage(message);
 
     // 랜덤 추천 (count 값이 없으면 기본 5개)
     const randomSelection = finalSelection
@@ -219,12 +227,25 @@ const App = () => {
     <div className="container">
       {/* 상단 헤더 */}
       <div className="header">
-        <h1>오늘 뭐 먹지 ? </h1>
-        <div className="auth-buttons">
-          <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>로그인</button>
-          <button onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}>회원가입</button>
-        </div>
-      </div>
+  <h1>오늘 뭐 먹지 ? </h1>
+  {user ? (
+    <div className="user-info">
+      <span className="welcome-msg">
+        환영합니다 {user.displayName}님!
+      </span>
+      <button className="bookmark-btn">북마크</button>
+      <button onClick={handleLogout} className="logout-btn">
+        로그아웃
+      </button>
+    </div>
+  ) : (
+    <div className="auth-buttons">
+      <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>로그인</button>
+      <button onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}>회원가입</button>
+    </div>
+  )}
+</div>
+
 
       <div className="search-row">
         <input
@@ -302,7 +323,6 @@ const App = () => {
         mode={authMode}
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        onSubmit={handleAuthSubmit}
       />
     </div>
   );

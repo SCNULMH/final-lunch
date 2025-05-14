@@ -56,11 +56,14 @@ body {
   letter-spacing: 1px;
   white-space: nowrap;
 }
-.auth-buttons {
+
+/* ===== 로그인/회원가입, 환영/북마크 영역 ===== */
+.auth-buttons, .user-info {
   display: flex;
   gap: 18px;
+  align-items: center;
 }
-.auth-buttons button {
+.auth-buttons button, .user-info button {
   background: #2e7031;
   color: #fff;
   border: none;
@@ -74,9 +77,35 @@ body {
   box-shadow: 0 2px 8px rgba(56, 142, 60, 0.13);
   white-space: nowrap;
 }
-.auth-buttons button:hover {
+.auth-buttons button:hover, .user-info button:hover {
   background: #FFD600;
   color: #388E3C;
+}
+.user-info .welcome-msg {
+  color: #fff;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-right: 8px;
+}
+.user-info .bookmark-btn {
+  background: #FFD600;
+  color: #222;
+  border: none;
+  border-radius: 18px;
+  padding: 8px 18px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.user-info .logout-btn {
+  background: #388E3C;
+  color: #fff;
+  border: 1.5px solid #fff;
+  border-radius: 18px;
+  padding: 8px 18px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 4px;
 }
 
 /* ===== 지도 영역 ===== */
@@ -226,10 +255,8 @@ input[type="number"].recommend-count {
   border-radius: 18px;
   background-color: #f9f9f9;
   box-shadow: 0 1px 8px rgba(56, 142, 60, 0.07);
-
-  /* 스크롤바 항상 얇게, 자연스럽게 보이게 */
-  scrollbar-width: thin;           /* Firefox */
-  scrollbar-color: #d0d0d0 #f9f9f9; /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #d0d0d0 #f9f9f9;
 }
 .scrollable-list,
 #restaurantList {
@@ -241,12 +268,9 @@ input[type="number"].recommend-count {
   border-radius: 18px;
   background-color: #f9f9f9;
   box-shadow: 0 1px 8px rgba(56, 142, 60, 0.07);
-
   scrollbar-width: thin;
   scrollbar-color: #d0d0d0 #f9f9f9;
 }
-
-/* 크롬, 사파리, 엣지용 스크롤바 스타일 */
 .restaurant-list::-webkit-scrollbar,
 .scrollable-list::-webkit-scrollbar,
 #restaurantList::-webkit-scrollbar {
@@ -290,8 +314,7 @@ input[type="number"].recommend-count {
   cursor: pointer;
   position: relative;
 }
-.restaurant-card:active, 
-.restaurant-card:hover {
+.restaurant-card:active, .restaurant-card:hover {
   box-shadow: 0 6px 24px rgba(56, 142, 60, 0.17);
   transform: translateY(-2px) scale(1.01);
 }
@@ -314,7 +337,7 @@ input[type="number"].recommend-count {
   margin: 24px 0;
   font-weight: bold;
   text-align: center;
-  font-size: 1.5em; /* ← 메시지 크기만 키움 (약 27px) */
+  font-size: 1.5em;
 }
 
 .detail-btn {
@@ -336,32 +359,15 @@ input[type="number"].recommend-count {
 
 /* ===== 북마크 버튼 ===== */
 .bookmark-btn {
-  background: none;
+  background: #FFD600;
+  color: #222;
   border: none;
-  font-size: 1.6em;
-  color: #bbb;
-  cursor: pointer;
-  position: absolute;
-  top: 14px;
-  right: 20px;
-  z-index: 2;
-  padding: 0;
-  border-radius: 50%;
-  transition: color 0.2s, background 0.2s;
-}
-.bookmark-btn[aria-label="북마크 해제"] { color: #FFD600; }
-.bookmark-btn:focus { outline: 2px solid #4CAF50; background: #f1fff1; }
-
-/* ===== 추천 카드 ===== */
-.recommend-card {
-  background: #fffbe7;
-  border: 1.5px solid #FFD600;
   border-radius: 18px;
-  padding: 18px;
-  margin-bottom: 18px;
-  text-align: center;
-  font-size: 1.13em;
+  padding: 8px 18px;
   font-weight: bold;
+  cursor: pointer;
+  margin-left: 4px;
+  font-size: 1.08em;
 }
 
 /* ===== 인증 모달 ===== */
@@ -447,9 +453,10 @@ input[type="number"].recommend-count {
     font-size: 1.5em;
     margin-bottom: 6px;
   }
-  .auth-buttons {
+  .auth-buttons, .user-info {
     width: 100%;
     justify-content: flex-end;
+    gap: 8px;
   }
   .search-row, .restaurant-list, .map-area {
     width: 98%;
@@ -474,10 +481,10 @@ input[type="number"].recommend-count {
     font-size: 1.08em;
     margin-bottom: 0;
   }
-  .auth-buttons {
+  .auth-buttons, .user-info {
     gap: 8px;
   }
-  .auth-buttons button {
+  .auth-buttons button, .user-info button {
     padding: 8px 12px;
     font-size: 0.97em;
     border-radius: 14px;
