@@ -223,14 +223,15 @@ const handleSpin = () => {
     <div className="container">
       {/* 상단 헤더 */}
       <div className="header">
-        <h1>식당 추천 앱</h1>
+        <h1>오늘 뭐 먹지 ? </h1>
         <div className="auth-buttons">
           <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>로그인</button>
           <button onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}>회원가입</button>
         </div>
       </div>
 
-      <RadiusInput setRadius={setRadius} />
+      
+          <div className="search-row">
       <input
         type="text"
         placeholder="주소 또는 건물명 입력"
@@ -243,6 +244,7 @@ const handleSpin = () => {
         }}
       />
       <button onClick={handleSearch}>검색</button>
+    </div>
       
       {searchResults.length > 0 && (
         <div className="scrollable-list">
@@ -267,7 +269,7 @@ const handleSpin = () => {
       <div style={{ textAlign: 'center', margin: '10px 0' }}>
         <button onClick={handleLocationClick}>현위치</button>
       </div>
-
+      <RadiusInput setRadius={setRadius} />
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <input
           type="number"

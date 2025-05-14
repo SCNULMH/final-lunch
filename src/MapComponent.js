@@ -26,7 +26,7 @@ const MapComponent = ({ mapLoaded, restaurants, mapCenter, radius, myPosition })
     const { kakao } = window;
     const map = new kakao.maps.Map(mapRef.current, {
       center: new kakao.maps.LatLng(mapCenter.lat, mapCenter.lng),
-      level: 3,
+      level: 4,
     });
 
     // 내 위치 마커 추가 (빨간색)
