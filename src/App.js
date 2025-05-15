@@ -1,3 +1,5 @@
+// src/App.js
+
 import React, { useState, useEffect } from 'react';
 import MapComponent from './MapComponent';
 import RestaurantList from './RestaurantList';
@@ -6,6 +8,18 @@ import AuthModal from './components/AuthModal';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import './styles.css';
+
+// 북마크 불러오기/저장 함수
+const loadBookmarks = () => {
+  try {
+    return JSON.parse(localStorage.getItem('bookmarks') || '{}');
+  } catch {
+    return {};
+  }
+};
+const saveBookmarks = (bookmarks) => {
+  localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+};
 
 const App = () => {
   // 상태 선언
@@ -22,8 +36,12 @@ const App = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
-  const [noIncludedMessage, setNoIncludedMessage] = useState(""); // 안내 메시지
-  const [user, setUser] = useState(null); // Firebase 로그인 유저
+  const [noIncludedMessage, setNoIncludedMessage] = useState("");
+  const [user, setUser] = useState(null);
+
+  // 북마크 관련 상태
+  const [bookmarks, setBookmarks] = useState(loadBookmarks());
+  const [isBookmarkMode, setIsBookmarkMode] = useState(false);
 
   const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
   const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
@@ -35,6 +53,20 @@ const App = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // 북마크 토글 함수
+  const toggleBookmark = (id, item) => {
+    setBookmarks((prev) => {
+      const updated = { ...prev };
+      if (updated[id]) {
+        delete updated[id];
+      } else {
+        updated[id] = item;
+      }
+      saveBookmarks(updated);
+      return updated;
+    });
+  };
 
   // 로그아웃
   const handleLogout = async () => {
@@ -137,8 +169,11 @@ const App = () => {
 
   // 랜덤 추천 (포함/제외 카테고리, 5개 랜덤)
   const handleSpin = () => {
-    if (restaurants.length === 0) {
-      alert("식당 목록이 비어 있습니다. 주소를 검색해 주세요.");
+    // 북마크 모드면 북마크 데이터만, 아니면 전체 식당 데이터 사용
+    const dataList = isBookmarkMode ? Object.values(bookmarks) : restaurants;
+
+    if (dataList.length === 0) {
+      alert(isBookmarkMode ? "북마크한 식당이 없습니다." : "식당 목록이 비어 있습니다. 주소를 검색해 주세요.");
       return;
     }
 
@@ -149,7 +184,7 @@ const App = () => {
     const included = includedCategory.trim();
 
     // 1. 필터링: 제외 카테고리, 포함 카테고리
-    const filteredRestaurants = restaurants.filter((restaurant) => {
+    const filteredRestaurants = dataList.filter((restaurant) => {
       const isExcluded = excludedCategories.length > 0
         ? excludedCategories.some(cat => restaurant.category_name.includes(cat))
         : false;
@@ -167,7 +202,7 @@ const App = () => {
       if (included) {
         message = `"${included}" 음식점이 주변에 없어 랜덤 음식점을 안내합니다.`;
       }
-      const notExcluded = restaurants.filter((restaurant) => {
+      const notExcluded = dataList.filter((restaurant) => {
         const isExcluded = excludedCategories.some(cat =>
           restaurant.category_name.includes(cat)
         );
@@ -185,12 +220,18 @@ const App = () => {
       .sort(() => 0.5 - Math.random())
       .slice(0, count || 5);
 
-    setRestaurants(randomSelection);
-    if (randomSelection.length > 0) {
-      setMapCenter({
-        lat: parseFloat(randomSelection[0].y),
-        lng: parseFloat(randomSelection[0].x),
-      });
+    // 추천 결과는 일반 모드에서는 restaurants, 북마크 모드에서는 bookmarks를 갱신
+    if (isBookmarkMode) {
+      // 북마크 모드에서는 북마크 데이터만 랜덤 추천 (상태는 그대로)
+      // 필요시 setBookmarks로 북마크 상태를 바꿀 수도 있음
+    } else {
+      setRestaurants(randomSelection);
+      if (randomSelection.length > 0) {
+        setMapCenter({
+          lat: parseFloat(randomSelection[0].y),
+          lng: parseFloat(randomSelection[0].x),
+        });
+      }
     }
   };
 
@@ -223,30 +264,39 @@ const App = () => {
     document.head.appendChild(script);
   }, []);
 
+  // 북마크 모드면 북마크 목록만, 아니면 전체 식당 목록 사용
+  const displayRestaurants = isBookmarkMode ? Object.values(bookmarks) : restaurants;
+
   return (
     <div className="container">
       {/* 상단 헤더 */}
       <div className="header">
-  <h1>오늘 뭐 먹지 ? </h1>
-  {user ? (
-    <div className="user-info">
-      <span className="welcome-msg">
-        환영합니다 {user.displayName}님!
-      </span>
-      <button className="bookmark-btn">북마크</button>
-      <button onClick={handleLogout} className="logout-btn">
-        로그아웃
-      </button>
-    </div>
-  ) : (
-    <div className="auth-buttons">
-      <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>로그인</button>
-      <button onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}>회원가입</button>
-    </div>
-  )}
-</div>
+        <h1>오늘 뭐 먹지 ? </h1>
+        {user ? (
+          <div className="user-info">
+            <span className="welcome-msg">
+              환영합니다 {user.displayName}님!
+            </span>
+            {/* 북마크 버튼: 클릭 시 모드 토글 */}
+            <button
+              className="bookmark-btn"
+              onClick={() => setIsBookmarkMode(prev => !prev)}
+            >
+              {isBookmarkMode ? "일반 모드" : "북마크 모드"}
+            </button>
+            <button onClick={handleLogout} className="logout-btn">
+              로그아웃
+            </button>
+          </div>
+        ) : (
+          <div className="auth-buttons">
+            <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>로그인</button>
+            <button onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}>회원가입</button>
+          </div>
+        )}
+      </div>
 
-
+      {/* 검색, 지도, 추천, 리스트 UI는 북마크 모드/일반 모드 동일하게 표시 */}
       <div className="search-row">
         <input
           type="text"
@@ -261,7 +311,7 @@ const App = () => {
         />
         <button onClick={handleSearch}>검색</button>
       </div>
-      
+
       {searchResults.length > 0 && (
         <div className="scrollable-list">
           {searchResults.map((result, index) => (
@@ -275,9 +325,10 @@ const App = () => {
       <MapComponent
         mapLoaded={mapLoaded}
         mapCenter={mapCenter}
-        restaurants={restaurants}
+        restaurants={displayRestaurants}
         radius={radius}
         myPosition={myPosition}
+        bookmarks={bookmarks}
       />
 
       {/* 안내 메시지 표시 */}
@@ -285,7 +336,12 @@ const App = () => {
         <div className="result-message">{noIncludedMessage}</div>
       )}
 
-      <RestaurantList restaurants={restaurants} onSelect={handleSelectRestaurant} />
+      <RestaurantList
+        restaurants={displayRestaurants}
+        onSelect={handleSelectRestaurant}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
+      />
 
       <div style={{ textAlign: 'center', margin: '10px 0' }}>
         <button onClick={handleLocationClick}>현위치</button>

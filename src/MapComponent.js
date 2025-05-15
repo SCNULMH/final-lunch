@@ -1,23 +1,48 @@
+// src/MapComponent.js
+
 import React, { useEffect, useRef } from 'react';
 
 const RED_MARKER_IMG = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png';
+const BLUE_MARKER_IMG = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png'; // 북마크 마커(노란별)
+const SPOT_MARKER_IMG = 'http://t1.daumcdn.net/localimg/localimages/07/2018/pc/img/marker_spot.png'; // 내 위치 마커
 
-const MapComponent = ({ mapLoaded, restaurants, mapCenter, radius, myPosition }) => {
+const MapComponent = ({ 
+  mapLoaded, 
+  restaurants, 
+  mapCenter, 
+  radius, 
+  myPosition,
+  bookmarks
+}) => {
   const mapRef = useRef(null);
   const myMarkerRef = useRef(null);
 
+  // 마커 이미지 생성 함수
+  const createMarkerImage = (imgUrl) => {
+    // spot 마커는 사이즈가 다르므로 예외 처리
+    if (imgUrl === SPOT_MARKER_IMG) {
+      const imageSize = new window.kakao.maps.Size(24, 35);
+      const imageOption = { offset: new window.kakao.maps.Point(12, 35) };
+      return new window.kakao.maps.MarkerImage(imgUrl, imageSize, imageOption);
+    } else {
+      const imageSize = new window.kakao.maps.Size(64, 69);
+      const imageOption = { offset: new window.kakao.maps.Point(27, 69) };
+      return new window.kakao.maps.MarkerImage(imgUrl, imageSize, imageOption);
+    }
+  };
+
   // 원 추가 함수
   const addCircle = (map, position) => {
-    const circle = new window.kakao.maps.Circle({
+    new window.kakao.maps.Circle({
+      map: map,
       center: position,
       radius: radius,
       strokeWeight: 2,
       strokeColor: '#75B8FA',
       strokeOpacity: 0.7,
       fillColor: '#CFE7FF',
-      fillOpacity: 0.5,
+      fillOpacity: 0.5
     });
-    circle.setMap(map);
   };
 
   useEffect(() => {
@@ -29,56 +54,40 @@ const MapComponent = ({ mapLoaded, restaurants, mapCenter, radius, myPosition })
       level: 4,
     });
 
-    // 내 위치 마커 추가 (빨간색)
-    if (myPosition && myPosition.lat && myPosition.lng) {
+    // 내 위치 마커 (spot 마커로 변경)
+    if (myPosition?.lat && myPosition?.lng) {
       const pos = new kakao.maps.LatLng(myPosition.lat, myPosition.lng);
-
-      // 기존 마커 제거
-      if (myMarkerRef.current) {
-        myMarkerRef.current.setMap(null);
-      }
-
-      // 빨간 마커 이미지 (공식 사이즈/옵션)
-      const imageSize = new kakao.maps.Size(64, 69);
-      const imageOption = { offset: new kakao.maps.Point(27, 69) };
-      const markerImage = new kakao.maps.MarkerImage(
-        RED_MARKER_IMG,
-        imageSize,
-        imageOption
-      );
-
-      // 마커 생성
+      
+      if (myMarkerRef.current) myMarkerRef.current.setMap(null);
+      
       const myMarker = new kakao.maps.Marker({
         position: pos,
-        image: markerImage,
-        title: "내 위치",
+        image: createMarkerImage(SPOT_MARKER_IMG),
+        title: "내 위치"
       });
       myMarker.setMap(map);
       myMarkerRef.current = myMarker;
 
-      // 인포윈도우(말풍선)
-      const infowindow = new kakao.maps.InfoWindow({
-        content: '<div style="padding:5px; color:#d32f2f;">내 위치</div>',
-      });
-      infowindow.open(map, myMarker);
-
-      // 지도 중심 이동
+      new kakao.maps.InfoWindow({
+        content: '<div style="padding:5px; color:#d32f2f;">내 위치</div>'
+      }).open(map, myMarker);
+      
       map.setCenter(pos);
     }
 
-    // 레스토랑 마커 추가
+    // 식당 마커 추가 (북마크 여부에 따라 색상 변경)
     restaurants.forEach((restaurant) => {
-      const markerPosition = new kakao.maps.LatLng(restaurant.y, restaurant.x);
+      const isBookmarked = !!bookmarks[restaurant.id];
       const marker = new kakao.maps.Marker({
-        position: markerPosition,
+        position: new kakao.maps.LatLng(restaurant.y, restaurant.x),
         title: restaurant.place_name,
+        image: createMarkerImage(isBookmarked ? BLUE_MARKER_IMG : RED_MARKER_IMG)
       });
       marker.setMap(map);
     });
 
-    // 반경 원 추가
     addCircle(map, new kakao.maps.LatLng(mapCenter.lat, mapCenter.lng));
-  }, [mapLoaded, mapCenter, restaurants, radius, myPosition]);
+  }, [mapLoaded, mapCenter, restaurants, radius, myPosition, bookmarks]);
 
   return <div ref={mapRef} id="map" style={{ width: '100%', height: '400px' }} />;
 };
