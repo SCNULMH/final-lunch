@@ -7,19 +7,8 @@ import RadiusInput from './RadiusInput';
 import AuthModal from './components/AuthModal';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
+import { subscribeBookmarks, addBookmark, removeBookmark } from './services/bookmark'; // Firestore 연동 함수
 import './styles.css';
-
-// 북마크 불러오기/저장 함수
-const loadBookmarks = () => {
-  try {
-    return JSON.parse(localStorage.getItem('bookmarks') || '{}');
-  } catch {
-    return {};
-  }
-};
-const saveBookmarks = (bookmarks) => {
-  localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
-};
 
 const App = () => {
   // 상태 선언
@@ -39,36 +28,43 @@ const App = () => {
   const [noIncludedMessage, setNoIncludedMessage] = useState("");
   const [user, setUser] = useState(null);
 
-  // 북마크 관련 상태
-  const [bookmarks, setBookmarks] = useState(loadBookmarks());
+  // Firestore 북마크 상태
+  const [bookmarks, setBookmarks] = useState({});
   const [isBookmarkMode, setIsBookmarkMode] = useState(false);
-
-  // 북마크 모드 추천 결과 상태 추가
   const [bookmarkRandomSelection, setBookmarkRandomSelection] = useState(null);
 
   const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
   const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
 
-  // Firebase 로그인 상태 감지
+  // Firebase 로그인 상태 감지 및 북마크 실시간 구독
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (!currentUser) {
+        setBookmarks({});
+        return;
+      }
+      // Firestore에서 북마크 실시간 구독
+      const unsubscribeBookmarks = subscribeBookmarks(currentUser.uid, (data) => {
+        setBookmarks({ ...data });
+      });
+      // 언마운트 시 구독 해제
+      return unsubscribeBookmarks;
     });
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
-  // 북마크 토글 함수
+  // Firestore 북마크 토글 함수
   const toggleBookmark = (id, item) => {
-    setBookmarks((prev) => {
-      const updated = { ...prev };
-      if (updated[id]) {
-        delete updated[id];
-      } else {
-        updated[id] = item;
-      }
-      saveBookmarks(updated);
-      return updated;
-    });
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    if (bookmarks[id]) {
+      removeBookmark(user.uid, id);
+    } else {
+      addBookmark(user.uid, id, item);
+    }
     setBookmarkRandomSelection(null); // 북마크 변경 시 추천 결과 초기화
   };
 
@@ -174,7 +170,6 @@ const App = () => {
   // 랜덤 추천 (포함/제외 카테고리, 5개 랜덤)
   const handleSpin = () => {
     const dataList = isBookmarkMode ? Object.values(bookmarks) : restaurants;
-
     if (dataList.length === 0) {
       alert(isBookmarkMode ? "북마크한 식당이 없습니다." : "식당 목록이 비어 있습니다. 주소를 검색해 주세요.");
       return;
@@ -365,7 +360,6 @@ const App = () => {
         />
         <button style={{ width: '210px' }} onClick={handleSpin}>랜덤 추천</button>
       </div>
-
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0px' }}>
         <input
           type="text"

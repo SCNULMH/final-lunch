@@ -1,39 +1,46 @@
-// src/RestaurantList.js
-
 import React, { useState, useEffect } from 'react';
-
-// 북마크 상태를 localStorage에서 불러오고 저장하는 함수
-const loadBookmarks = () => {
-  try {
-    return JSON.parse(localStorage.getItem('bookmarks') || '{}');
-  } catch {
-    return {};
-  }
-};
-const saveBookmarks = (bookmarks) => {
-  localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
-};
+import { addBookmark, removeBookmark, subscribeBookmarks } from './services/bookmark';
+import { auth } from './firebase';
 
 function RestaurantList({ restaurants, onSelect }) {
   const [bookmarks, setBookmarks] = useState({});
 
-  // 컴포넌트가 처음 렌더링될 때 북마크 로드
   useEffect(() => {
-    setBookmarks(loadBookmarks());
+    const unsubscribeAuth = auth.onAuthStateChanged(user => {
+      if (!user) {
+        setBookmarks({});
+        return;
+      }
+
+      const unsubscribeBookmark = subscribeBookmarks(user.uid, (data) => {
+        setBookmarks({ ...data }); // 새로운 객체로 상태 업데이트
+      });
+
+      return unsubscribeBookmark;
+    });
+
+    return () => {
+      unsubscribeAuth();
+    };
   }, []);
 
-  // 북마크 토글 함수
-  const toggleBookmark = (id, item) => {
-    setBookmarks((prev) => {
-      const updated = { ...prev };
-      if (updated[id]) {
-        delete updated[id];
+  const toggleBookmark = async (id, item) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const bookmarkId = String(id); // ID 문자열 변환
+    console.log("Firestore 문서 ID:", bookmarkId);
+    console.log("React 상태의 북마크 ID:", Object.keys(bookmarks));
+
+    try {
+      if (bookmarks[bookmarkId]) {
+        await removeBookmark(user.uid, bookmarkId);
       } else {
-        updated[id] = item;
+        await addBookmark(user.uid, { ...item, id: bookmarkId });
       }
-      saveBookmarks(updated);
-      return updated;
-    });
+    } catch (error) {
+      console.error("북마크 토글 실패:", error);
+    }
   };
 
   return (
@@ -44,7 +51,9 @@ function RestaurantList({ restaurants, onSelect }) {
         </div>
       ) : (
         restaurants.map((item) => {
-          const isBookmarked = !!bookmarks[item.id];
+          const bookmarkId = String(item.id); // ID 문자열 변환
+          const isBookmarked = !!bookmarks[bookmarkId];
+
           return (
             <div
               className="restaurant-card"
@@ -53,10 +62,9 @@ function RestaurantList({ restaurants, onSelect }) {
               tabIndex={0}
               role="button"
             >
-              {/* 북마크 버튼 */}
               <button
                 className="bookmark-btn"
-                onClick={e => {
+                onClick={(e) => {
                   e.stopPropagation();
                   toggleBookmark(item.id, item);
                 }}
@@ -73,14 +81,16 @@ function RestaurantList({ restaurants, onSelect }) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: '8px',
-                  transition: 'background 0.2s'
+                  transition: 'background 0.2s',
                 }}
               >
-                <span style={{
-                  fontSize: '0.8em',
-                  lineHeight: 1,
-                  fontWeight: 'bold'
-                }}>
+                <span
+                  style={{
+                    fontSize: '0.8em',
+                    lineHeight: 1,
+                    fontWeight: 'bold',
+                  }}
+                >
                   ★
                 </span>
               </button>
@@ -88,18 +98,12 @@ function RestaurantList({ restaurants, onSelect }) {
               <div className="restaurant-meta">
                 {item.road_address_name || item.address_name}
               </div>
-              <div className="restaurant-meta">
-                {item.category_name}
-              </div>
+              <div className="restaurant-meta">{item.category_name}</div>
               {item.phone && (
-                <div className="restaurant-meta">
-                  전화: {item.phone}
-                </div>
+                <div className="restaurant-meta">전화: {item.phone}</div>
               )}
               {item.distance && (
-                <div className="restaurant-meta">
-                  거리: {item.distance}m
-                </div>
+                <div className="restaurant-meta">거리: {item.distance}m</div>
               )}
               <button
                 className="detail-btn"
@@ -119,3 +123,4 @@ function RestaurantList({ restaurants, onSelect }) {
 }
 
 export default RestaurantList;
+  
