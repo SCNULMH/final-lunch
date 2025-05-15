@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../firebase';
-
+// test
 const AuthModal = ({ mode, open, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
