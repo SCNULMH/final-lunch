@@ -43,6 +43,9 @@ const App = () => {
   const [bookmarks, setBookmarks] = useState(loadBookmarks());
   const [isBookmarkMode, setIsBookmarkMode] = useState(false);
 
+  // 북마크 모드 추천 결과 상태 추가
+  const [bookmarkRandomSelection, setBookmarkRandomSelection] = useState(null);
+
   const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
   const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
 
@@ -66,6 +69,7 @@ const App = () => {
       saveBookmarks(updated);
       return updated;
     });
+    setBookmarkRandomSelection(null); // 북마크 변경 시 추천 결과 초기화
   };
 
   // 로그아웃
@@ -169,7 +173,6 @@ const App = () => {
 
   // 랜덤 추천 (포함/제외 카테고리, 5개 랜덤)
   const handleSpin = () => {
-    // 북마크 모드면 북마크 데이터만, 아니면 전체 식당 데이터 사용
     const dataList = isBookmarkMode ? Object.values(bookmarks) : restaurants;
 
     if (dataList.length === 0) {
@@ -220,10 +223,8 @@ const App = () => {
       .sort(() => 0.5 - Math.random())
       .slice(0, count || 5);
 
-    // 추천 결과는 일반 모드에서는 restaurants, 북마크 모드에서는 bookmarks를 갱신
     if (isBookmarkMode) {
-      // 북마크 모드에서는 북마크 데이터만 랜덤 추천 (상태는 그대로)
-      // 필요시 setBookmarks로 북마크 상태를 바꿀 수도 있음
+      setBookmarkRandomSelection(randomSelection); // 북마크 모드 추천 결과 반영
     } else {
       setRestaurants(randomSelection);
       if (randomSelection.length > 0) {
@@ -234,6 +235,11 @@ const App = () => {
       }
     }
   };
+
+  // 북마크 모드 전환 시 추천 결과 초기화
+  useEffect(() => {
+    setBookmarkRandomSelection(null);
+  }, [isBookmarkMode, bookmarks]);
 
   // 현위치 버튼 클릭
   const handleLocationClick = async () => {
@@ -264,8 +270,10 @@ const App = () => {
     document.head.appendChild(script);
   }, []);
 
-  // 북마크 모드면 북마크 목록만, 아니면 전체 식당 목록 사용
-  const displayRestaurants = isBookmarkMode ? Object.values(bookmarks) : restaurants;
+  // 북마크 모드면 북마크 랜덤추천 결과 → 없으면 전체 북마크, 일반 모드는 전체 식당
+  const displayRestaurants = isBookmarkMode
+    ? (bookmarkRandomSelection || Object.values(bookmarks))
+    : restaurants;
 
   return (
     <div className="container">
@@ -277,7 +285,6 @@ const App = () => {
             <span className="welcome-msg">
               환영합니다 {user.displayName}님!
             </span>
-            {/* 북마크 버튼: 클릭 시 모드 토글 */}
             <button
               className="bookmark-btn"
               onClick={() => setIsBookmarkMode(prev => !prev)}
