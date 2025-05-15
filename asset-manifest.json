@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/final-lunch/static/css/main.687f5248.css",
-    "main.js": "/final-lunch/static/js/main.b72727f4.js",
+    "main.js": "/final-lunch/static/js/main.dfc7053f.js",
     "index.html": "/final-lunch/index.html",
     "main.687f5248.css.map": "/final-lunch/static/css/main.687f5248.css.map",
-    "main.b72727f4.js.map": "/final-lunch/static/js/main.b72727f4.js.map"
+    "main.dfc7053f.js.map": "/final-lunch/static/js/main.dfc7053f.js.map"
   },
   "entrypoints": [
     "static/css/main.687f5248.css",
-    "static/js/main.b72727f4.js"
+    "static/js/main.dfc7053f.js"
   ]
 }
