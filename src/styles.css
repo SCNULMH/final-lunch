@@ -240,7 +240,7 @@ input[type="submit"]:active {
   transform: translateY(-2px) scale(1.04);
 }
 
-/* ===== 추천 개수와 랜덤추천 버튼 사이 간격 넓히기 ===== */
+/* ===== 추천 개수와 랜덤추천 버튼 사이 간격 ===== */
 input[type="number"].recommend-count {
   margin-right: 30px;
 }
@@ -259,32 +259,32 @@ input[type="number"].recommend-count {
   scrollbar-color: #d0d0d0 #f9f9f9;
 }
 
-/* 검색 결과 리스트 및 식당 리스트 컨테이너(2열 그리드 적용) */
+/* 검색 결과 리스트 & 식당 리스트 컨테이너(2열) */
 .scrollable-list,
 #restaurantList {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 두 칸 */
-  gap: 12px;                  /* 카드 간격 */
-  width: 86%;                 /* 90% → 86%로 줄여 배경 겹침 완화 */
-  max-height: 280px;          /* 300 → 280 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 86%;            /* 겹침 완화 */
+  max-height: 280px;     /* 살짝 줄임 */
   overflow-y: auto;
-  padding: 10px 12px;         /* 패딩 축소 */
+  padding: 10px 12px;    /* 패딩 축소 */
   margin-top: 12px;
-  border-radius: 16px;        /* 라운드도 살짝 축소 */
+  border-radius: 16px;
   background-color: #f9f9f9;
   box-shadow: 0 1px 8px rgba(56, 142, 60, 0.07);
   scrollbar-width: thin;
   scrollbar-color: #d0d0d0 #f9f9f9;
 }
 
-/* 마지막 카드가 홀수 개일 때 가운데 정렬 */
+/* 마지막 카드: 아이템 수가 홀수일 때만 가운데 정렬 */
 #restaurantList .restaurant-card:last-child:nth-child(odd) {
-  grid-column: 1 / -1;     /* 한 줄 전체 사용 */
-  justify-self: center;     /* 가운데 정렬 */
-  max-width: 360px;         /* 너무 넓지 않게 제한 (필요시 조절) */
+  grid-column: 1 / -1;   /* 한 줄 전체 사용 */
+  justify-self: center;  /* 가운데 배치 */
+  max-width: 360px;      /* 너무 넓지 않게 */
 }
 
-/* 각 카드가 그리드셀에 맞게 */
+/* 각 카드가 그리드 셀에 맞게 */
 #restaurantList .restaurant-card {
   width: 100%;
   margin: 0;
@@ -322,10 +322,10 @@ input[type="number"].recommend-count {
 /* ===== 식당 카드 ===== */
 .restaurant-card {
   background: #fff;
-  border-radius: 18px; /* 22 → 18 (겹침 느낌 완화) */
+  border-radius: 18px;   /* 22 → 18 */
   box-shadow: 0 1px 10px rgba(56, 142, 60, 0.05);
-  margin-bottom: 0;    /* grid gap 사용하므로 margin 제거 */
-  padding: 16px 14px;  /* 22/18 → 16/14로 축소 */
+  margin-bottom: 0;      /* grid gap 사용 */
+  padding: 16px 14px;    /* 축소 */
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -487,8 +487,6 @@ input[type="number"].recommend-count {
     max-width: 100vw;
     border-radius: 0;
     margin: 0;
-    box-shadow: none;
-    padding: 0 0 14px 0;
   }
   .header {
     border-radius: 0 0 24px 24px;
@@ -524,12 +522,6 @@ input[type="number"].recommend-count {
     padding: 9px 12px;
     font-size: 0.97em;
     border-radius: 0 12px 12px 0;
-  }
-  input[type="text"],
-  input[type="number"] {
-    font-size: 0.97em;
-    padding: 8px 8px;
-    border-radius: 10px;
   }
   .restaurant-card {
     padding: 12px 6px;

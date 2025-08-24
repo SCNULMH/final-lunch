@@ -1,47 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { addBookmark, removeBookmark, subscribeBookmarks } from './services/bookmark';
-import { auth } from './firebase';
+import React from 'react';
 
-function RestaurantList({ restaurants, onSelect }) {
-  const [bookmarks, setBookmarks] = useState({});
-
-  useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(user => {
-      if (!user) {
-        setBookmarks({});
-        return;
-      }
-
-      const unsubscribeBookmark = subscribeBookmarks(user.uid, (data) => {
-        setBookmarks({ ...data }); // 새로운 객체로 상태 업데이트
-      });
-
-      return unsubscribeBookmark;
-    });
-
-    return () => {
-      unsubscribeAuth();
-    };
-  }, []);
-
-  const toggleBookmark = async (id, item) => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const bookmarkId = String(id); // ID 문자열 변환
-    console.log("Firestore 문서 ID:", bookmarkId);
-    console.log("React 상태의 북마크 ID:", Object.keys(bookmarks));
-
-    try {
-      if (bookmarks[bookmarkId]) {
-        await removeBookmark(user.uid, bookmarkId);
-      } else {
-        await addBookmark(user.uid, { ...item, id: bookmarkId });
-      }
-    } catch (error) {
-      console.error("북마크 토글 실패:", error);
-    }
-  };
+function RestaurantList({
+  restaurants = [],
+  onSelect = () => {},
+  bookmarks = {},
+  toggleBookmark = () => {},
+}) {
+  if (!Array.isArray(restaurants)) restaurants = [];
 
   return (
     <div id="restaurantList">
@@ -51,42 +16,49 @@ function RestaurantList({ restaurants, onSelect }) {
         </div>
       ) : (
         restaurants.map((item) => {
-          const bookmarkId = String(item.id); // ID 문자열 변환
+          // ID를 문자열로 통일
+          const bookmarkId = String(item.id ?? '');
           const isBookmarked = !!bookmarks[bookmarkId];
 
           return (
             <div
               className="restaurant-card"
-              key={item.id}
+              key={bookmarkId || `${item.x}_${item.y}_${item.place_name}`}
               onClick={() => onSelect(item)}
               tabIndex={0}
               role="button"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') onSelect(item);
+              }}
             >
+              {/* 북마크 토글 버튼 */}
               <button
                 className="bookmark-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleBookmark(item.id, item);
+                  toggleBookmark(bookmarkId || item.id, item);
                 }}
-                aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
+                aria-label={isBookmarked ? '북마크 해제' : '북마크 추가'}
+                title={isBookmarked ? '북마크 해제' : '북마크 추가'}
                 style={{
                   background: isBookmarked ? '#FFD600' : 'transparent',
                   color: '#222',
-                  fontSize: '1.7em',
-                  width: '40px',
-                  height: '40px',
+                  fontSize: '1.4em',
+                  width: 40,
+                  height: 40,
                   border: 'none',
-                  borderRadius: '16px',
+                  borderRadius: 16,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginRight: '8px',
+                  marginRight: 8,
                   transition: 'background 0.2s',
+                  alignSelf: 'flex-end',
                 }}
               >
                 <span
                   style={{
-                    fontSize: '0.8em',
+                    fontSize: '0.9em',
                     lineHeight: 1,
                     fontWeight: 'bold',
                   }}
@@ -94,26 +66,34 @@ function RestaurantList({ restaurants, onSelect }) {
                   ★
                 </span>
               </button>
+
+              {/* 본문 */}
               <div className="restaurant-title">{item.place_name}</div>
               <div className="restaurant-meta">
                 {item.road_address_name || item.address_name}
               </div>
-              <div className="restaurant-meta">{item.category_name}</div>
+              {item.category_name && (
+                <div className="restaurant-meta">{item.category_name}</div>
+              )}
               {item.phone && (
                 <div className="restaurant-meta">전화: {item.phone}</div>
               )}
               {item.distance && (
                 <div className="restaurant-meta">거리: {item.distance}m</div>
               )}
-              <button
-                className="detail-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(item.place_url, '_blank');
-                }}
-              >
-                상세보기
-              </button>
+
+              {/* 상세보기 */}
+              {item.place_url && (
+                <button
+                  className="detail-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(item.place_url, '_blank');
+                  }}
+                >
+                  상세보기
+                </button>
+              )}
             </div>
           );
         })
@@ -123,4 +103,3 @@ function RestaurantList({ restaurants, onSelect }) {
 }
 
 export default RestaurantList;
-  

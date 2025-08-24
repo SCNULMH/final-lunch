@@ -1,262 +1,103 @@
 // src/App.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MapComponent from './MapComponent';
 import RestaurantList from './RestaurantList';
 import RadiusInput from './RadiusInput';
 import AuthModal from './components/AuthModal';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
-import { subscribeBookmarks, addBookmark, removeBookmark } from './services/bookmark'; // Firestore 연동 함수
+import { subscribeBookmarks, addBookmark, removeBookmark } from './services/bookmark';
 import './styles.css';
 
+const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
+const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
+const KAKAO_HEADERS = { Authorization: `KakaoAK ${REST_API_KEY}` };
+
+/** 포함/제외 스코프 안에서 '한 페이지'를 가져오는 헬퍼
+ * - include가 있으면 키워드 검색(query='한식 식당' 같은 느낌)
+ * - include가 없으면 카테고리 검색(FD6=음식점)
+ * - Kakao 제약: size<=15, page<=45
+ */
+async function fetchPlacesPage({ x, y, radius, include = '', page = 1, size = 15 }) {
+  // 포함 필터가 있으면 "한식 식당" 같은 쿼리, 없으면 그냥 "식당"
+  const q = (include && include.trim())
+    ? `${include.trim()} 식당`
+    : '식당';
+
+  const url =
+    `https://dapi.kakao.com/v2/local/search/keyword.json` +
+    `?query=${encodeURIComponent(q)}` +
+    `&x=${x}&y=${y}&radius=${radius}&page=${page}&size=${size}`;
+
+  const res = await fetch(url, { headers: { Authorization: `KakaoAK ${REST_API_KEY}` } });
+  if (!res.ok) throw new Error('카카오 검색 실패');
+  return res.json();
+}
+
 const App = () => {
-  // 상태 선언
-  const [myPosition, setMyPosition] = useState(null);
-  const [radius, setRadius] = useState(2000);
-  const [address, setAddress] = useState('');
-  const [restaurants, setRestaurants] = useState([]);
-  const [count, setCount] = useState(0);
-  const [excludedCategory, setExcludedCategory] = useState('');
-  const [includedCategory, setIncludedCategory] = useState('');
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapCenter, setMapCenter] = useState({ lat: 34.9687735, lng: 127.4802359 });
-  const [searchResults, setSearchResults] = useState([]);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login');
-  const [noIncludedMessage, setNoIncludedMessage] = useState("");
+  // 인증
   const [user, setUser] = useState(null);
 
-  // Firestore 북마크 상태
+  // 지도/검색 기준(Anchor) — 주소 선택/현위치에서만 갱신, 랜덤 추천 중엔 유지
+  const [searchCenter, setSearchCenter] = useState({ lat: 34.9687735, lng: 127.4802359 });
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [myPosition, setMyPosition] = useState(null);
+  const [radius, setRadius] = useState(2000);
+
+  const [address, setAddress] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+
+  // 리스트/랜덤/필터
+  const [restaurants, setRestaurants] = useState([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [includedCategory, setIncludedCategory] = useState('');
+  const [excludedCategory, setExcludedCategory] = useState('');
+  const [count, setCount] = useState(0);
+  const [noIncludedMessage, setNoIncludedMessage] = useState('');
+
+  // 북마크
   const [bookmarks, setBookmarks] = useState({});
   const [isBookmarkMode, setIsBookmarkMode] = useState(false);
   const [bookmarkRandomSelection, setBookmarkRandomSelection] = useState(null);
 
-  const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
-  const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
+  // 모달
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
 
-  // Firebase 로그인 상태 감지 및 북마크 실시간 구독
+  // 세션 중복 회피용 메모리 (새로고침하면 초기화)
+  const seenIdsRef = useRef(new Set());
+  const bookmarkUnsubRef = useRef(null);
+
+  /* === 1) 로그인/북마크 구독 === */
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) {
-        setBookmarks({});
-        return;
+
+      // 기존 북마크 구독 해제
+      if (bookmarkUnsubRef.current) {
+        bookmarkUnsubRef.current();
+        bookmarkUnsubRef.current = null;
       }
-      // Firestore에서 북마크 실시간 구독
-      const unsubscribeBookmarks = subscribeBookmarks(currentUser.uid, (data) => {
-        setBookmarks({ ...data });
-      });
-      // 언마운트 시 구독 해제
-      return unsubscribeBookmarks;
+
+      if (currentUser) {
+        bookmarkUnsubRef.current = subscribeBookmarks(currentUser.uid, (data) => {
+          setBookmarks({ ...data });
+        });
+      } else {
+        setBookmarks({});
+      }
     });
-    return () => unsubscribeAuth();
+
+    return () => {
+      if (bookmarkUnsubRef.current) bookmarkUnsubRef.current();
+      unsubscribeAuth();
+    };
   }, []);
 
-  // Firestore 북마크 토글 함수
-  const toggleBookmark = (id, item) => {
-    if (!user) {
-      alert('로그인이 필요합니다.');
-      return;
-    }
-    if (bookmarks[id]) {
-      removeBookmark(user.uid, id);
-    } else {
-      addBookmark(user.uid, id, item);
-    }
-    setBookmarkRandomSelection(null); // 북마크 변경 시 추천 결과 초기화
-  };
-
-  // 로그아웃
-  const handleLogout = async () => {
-    await signOut(auth);
-  };
-
-  // 주소 및 키워드 검색
-  const fetchAddressData = async (query) => {
-    const addressUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}`;
-    const keywordUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&category_group_code=AT4`;
-
-    try {
-      const [addressResponse, keywordResponse] = await Promise.all([
-        fetch(addressUrl, { headers: { Authorization: `KakaoAK ${REST_API_KEY}` } }),
-        fetch(keywordUrl, { headers: { Authorization: `KakaoAK ${REST_API_KEY}` } }),
-      ]);
-      if (!addressResponse.ok || !keywordResponse.ok) {
-        throw new Error(`검색 실패: ${addressResponse.status} ${addressResponse.statusText}`);
-      }
-
-      const addressData = await addressResponse.json();
-      const keywordData = await keywordResponse.json();
-
-      const combinedResults = [
-        ...(addressData.documents || []),
-        ...(keywordData.documents || [])
-      ];
-
-      // 결과가 없을 때 fallback 검색
-      if (combinedResults.length === 0) {
-        const fallbackKeywordUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}`;
-        const fallbackResponse = await fetch(fallbackKeywordUrl, {
-          headers: { Authorization: `KakaoAK ${REST_API_KEY}` },
-        });
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json();
-          setSearchResults(fallbackData.documents || []);
-        } else {
-          alert("검색 결과가 없습니다.");
-        }
-      } else {
-        setSearchResults(combinedResults);
-      }
-    } catch (error) {
-      console.error("검색 중 오류 발생:", error);
-      alert("검색 중 오류가 발생했습니다.");
-    }
-  };
-
-  // 근처 식당 검색 (모든 페이지 요청)
-  const fetchNearbyRestaurants = async (x, y) => {
-    let allRestaurants = [];
-    for (let page = 1; page <= 3; page++) {
-      const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=식당&x=${x}&y=${y}&radius=${radius}&page=${page}`;
-      try {
-        const response = await fetch(url, {
-          headers: { Authorization: `KakaoAK ${REST_API_KEY}` },
-        });
-        if (!response.ok) break;
-        const data = await response.json();
-        if (data.documents && data.documents.length > 0) {
-          allRestaurants = [...allRestaurants, ...data.documents];
-          if (data.documents.length < 15) break;
-        } else {
-          break;
-        }
-      } catch (error) {
-        console.error("페이지 요청 실패:", error);
-        break;
-      }
-    }
-    if (allRestaurants.length > 0) {
-      setRestaurants(allRestaurants);
-    } else {
-      alert("근처에 식당이 없습니다.");
-    }
-  };
-
-  // 주소 검색 실행
-  const handleSearch = async () => {
-    if (!address) {
-      alert("주소를 입력해 주세요.");
-      return;
-    }
-    await fetchAddressData(address);
-  };
-
-  // 검색 결과에서 주소 선택
-  const handleSelectAddress = (result) => {
-    setAddress(result.address_name);
-    setMapCenter({ lat: parseFloat(result.y), lng: parseFloat(result.x) });
-    fetchNearbyRestaurants(result.x, result.y);
-    setSearchResults([]);
-  };
-
-  // 식당 클릭 시
-  const handleSelectRestaurant = (restaurant) => {
-    setSelectedRestaurant(restaurant);
-  };
-
-  // 랜덤 추천 (포함/제외 카테고리, 5개 랜덤)
-  const handleSpin = () => {
-    const dataList = isBookmarkMode ? Object.values(bookmarks) : restaurants;
-    if (dataList.length === 0) {
-      alert(isBookmarkMode ? "북마크한 식당이 없습니다." : "식당 목록이 비어 있습니다. 주소를 검색해 주세요.");
-      return;
-    }
-
-    const excludedCategories = excludedCategory
-      .split(',')
-      .map((cat) => cat.trim())
-      .filter((cat) => cat.length > 0);
-    const included = includedCategory.trim();
-
-    // 1. 필터링: 제외 카테고리, 포함 카테고리
-    const filteredRestaurants = dataList.filter((restaurant) => {
-      const isExcluded = excludedCategories.length > 0
-        ? excludedCategories.some(cat => restaurant.category_name.includes(cat))
-        : false;
-      const isIncluded = included.length > 0
-        ? restaurant.category_name.includes(included)
-        : true;
-      return !isExcluded && isIncluded;
-    });
-
-    // 2. 최종 후보 결정
-    let finalSelection = [];
-    let message = "";
-
-    if (filteredRestaurants.length === 0) {
-      if (included) {
-        message = `"${included}" 음식점이 주변에 없어 랜덤 음식점을 안내합니다.`;
-      }
-      const notExcluded = dataList.filter((restaurant) => {
-        const isExcluded = excludedCategories.some(cat =>
-          restaurant.category_name.includes(cat)
-        );
-        return !isExcluded;
-      });
-      finalSelection = notExcluded;
-    } else {
-      finalSelection = filteredRestaurants;
-    }
-
-    setNoIncludedMessage(message);
-
-    // 랜덤 추천 (count 값이 없으면 기본 5개)
-    const randomSelection = finalSelection
-      .sort(() => 0.5 - Math.random())
-      .slice(0, count || 5);
-
-    if (isBookmarkMode) {
-      setBookmarkRandomSelection(randomSelection); // 북마크 모드 추천 결과 반영
-    } else {
-      setRestaurants(randomSelection);
-      if (randomSelection.length > 0) {
-        setMapCenter({
-          lat: parseFloat(randomSelection[0].y),
-          lng: parseFloat(randomSelection[0].x),
-        });
-      }
-    }
-  };
-
-  // 북마크 모드 전환 시 추천 결과 초기화
+  /* === 2) 카카오맵 스크립트 로드 === */
   useEffect(() => {
-    setBookmarkRandomSelection(null);
-  }, [isBookmarkMode, bookmarks]);
-
-  // 현위치 버튼 클릭
-  const handleLocationClick = async () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        setMapCenter({ lat, lng });
-        setMyPosition({ lat, lng });
-        await fetchNearbyRestaurants(lng, lat);
-      }, (error) => {
-        console.error('위치를 가져오지 못했습니다: ', error);
-        alert('위치를 가져오지 못했습니다.');
-      });
-    } else {
-      alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
-    }
-  };
-
-  // 카카오맵 스크립트 로드
-  useEffect(() => {
-    const script = document.createElement("script");
+    const script = document.createElement('script');
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${JAVASCRIPT_API_KEY}&autoload=false`;
     script.async = true;
     script.onload = () => {
@@ -265,40 +106,299 @@ const App = () => {
     document.head.appendChild(script);
   }, []);
 
-  // 북마크 모드면 북마크 랜덤추천 결과 → 없으면 전체 북마크, 일반 모드는 전체 식당
+  /* === 3) 주소/키워드 검색 === */
+  const fetchAddressData = async (query) => {
+    const addressUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}`;
+    const keywordUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}`;
+
+    try {
+      const [addressResponse, keywordResponse] = await Promise.all([
+        fetch(addressUrl, { headers: KAKAO_HEADERS }),
+        fetch(keywordUrl, { headers: KAKAO_HEADERS }),
+      ]);
+
+      if (!addressResponse.ok || !keywordResponse.ok) throw new Error('검색 실패');
+
+      const addressData = await addressResponse.json();
+      const keywordData = await keywordResponse.json();
+
+      const combinedResults = [
+        ...(addressData.documents || []),
+        ...(keywordData.documents || []),
+      ];
+
+      if (combinedResults.length === 0) {
+        const fallbackUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}`;
+        const fallbackRes = await fetch(fallbackUrl, { headers: KAKAO_HEADERS });
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          setSearchResults(fallbackData.documents || []);
+        } else {
+          alert('검색 결과가 없습니다.');
+        }
+      } else {
+        setSearchResults(combinedResults);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('검색 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!address) {
+      alert('주소를 입력해 주세요.');
+      return;
+    }
+    await fetchAddressData(address);
+  };
+
+  const handleSelectAddress = (result) => {
+    const center = { lat: parseFloat(result.y), lng: parseFloat(result.x) };
+    setAddress(result.address_name);
+    setSearchCenter(center);                   // ★ 기준(Anchor) 갱신
+    fetchNearbyRestaurants(center.lng, center.lat);
+    setSearchResults([]);
+    // 새로운 지역으로 이동했으니 세션 중복 기록 초기화
+    seenIdsRef.current = new Set();
+  };
+
+  /* === 4) 반경 내 식당 조회(초기 표시용) === */
+  const fetchNearbyRestaurants = async (x, y) => {
+    let all = [];
+    for (let page = 1; page <= 3; page++) {
+      const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(
+        '식당'
+      )}&x=${x}&y=${y}&radius=${radius}&page=${page}`;
+      try {
+        const res = await fetch(url, { headers: KAKAO_HEADERS });
+        if (!res.ok) break;
+        const data = await res.json();
+        if (data.documents && data.documents.length > 0) {
+          all = [...all, ...data.documents];
+          if (data.documents.length < 15) break; // 다음 페이지 없음
+        } else {
+          break;
+        }
+      } catch (err) {
+        console.error('페이지 요청 실패:', err);
+        break;
+      }
+    }
+    if (all.length > 0) {
+      setRestaurants(all); // 초기 화면에는 전체 보여줌
+    } else {
+      alert('근처에 식당이 없습니다.');
+    }
+  };
+
+  /* === 5) 랜덤 추천 (필터 스코프에서 '새로 검색' 방식, Anchor 고정) === */
+  const handleSpin = async () => {
+    const pickCount = count || 5;
+
+    // 북마크 모드: 네트워크 X, 북마크 풀에서만
+    if (isBookmarkMode) {
+      const base = Object.values(bookmarks || {});
+      if (base.length === 0) {
+        alert('북마크한 식당이 없습니다.');
+        return;
+      }
+
+      const exList = (excludedCategory || '').split(',').map(s => s.trim()).filter(Boolean);
+      const inc = (includedCategory || '').trim();
+
+      let pool = base.filter((r) => {
+        const ex = exList.length ? exList.some(c => (r.category_name || '').includes(c)) : false;
+        const okInc = inc ? (r.category_name || '').includes(inc) : true;
+        return !ex && okInc;
+      });
+
+      if (pool.length === 0) {
+        setNoIncludedMessage(inc ? `"${inc}" 카테고리가 북마크에 없어 랜덤으로 안내합니다.` : '');
+        pool = base.filter((r) => exList.some(c => (r.category_name || '').includes(c)) ? false : true);
+      } else {
+        setNoIncludedMessage('');
+      }
+
+      const selection = [...pool].sort(() => 0.5 - Math.random()).slice(0, pickCount);
+      setBookmarkRandomSelection(selection);
+      return;
+    }
+
+    // 일반 모드: 필터 스코프에서 매번 새로 검색 (Anchor=searchCenter)
+    const x = searchCenter.lng; // Kakao: x=lng, y=lat
+    const y = searchCenter.lat;
+    const inc = (includedCategory || '').trim();
+    const exList = (excludedCategory || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    // 1) 1페이지로 전체 가용량 파악
+    let first;
+    try {
+      first = await fetchPlacesPage({ x, y, radius, include: inc, page: 1, size: 15 });
+    } catch (e) {
+      console.error(e);
+      alert('검색 중 오류가 발생했어요.');
+      return;
+    }
+
+    const total = Math.min(first?.meta?.pageable_count || 0, 675); // Kakao: 최대 45p*15
+    if (total === 0) {
+      setNoIncludedMessage(inc ? `"${inc}" 음식점이 주변에 없어 랜덤 음식점을 안내합니다.` : '');
+    } else {
+      setNoIncludedMessage('');
+    }
+    const totalPages = Math.max(1, Math.min(45, Math.ceil(total / 15)));
+
+    // 2) 임의 페이지를 여러 번 시도하며 새 아이템 수집
+    const want = pickCount;
+    const bucket = [];
+    const usedPages = new Set();
+    const notSeen = (r) => !seenIdsRef.current.has(String(r.id));
+    const passExclude = (r) =>
+      exList.length ? !exList.some(c => (r.category_name || '').includes(c)) : true;
+
+    // 첫 페이지 결과 활용
+    const primeDocs = (first?.documents || []).filter(passExclude).filter(notSeen);
+    bucket.push(...primeDocs);
+
+    // 부족하면 랜덤 페이지 더 긁기 (최대 8회)
+    for (let tries = 0; bucket.length < want && tries < 8; tries++) {
+      let p;
+      for (let guard = 0; guard < 5; guard++) {
+        const cand = 1 + Math.floor(Math.random() * totalPages);
+        if (!usedPages.has(cand)) { p = cand; break; }
+      }
+      if (!p) p = 1 + Math.floor(Math.random() * totalPages);
+      usedPages.add(p);
+
+      try {
+        const data = p === 1 ? first : await fetchPlacesPage({ x, y, radius, include: inc, page: p, size: 15 });
+        const docs = (data?.documents || []).filter(passExclude).filter(notSeen);
+        const existing = new Set(bucket.map(d => String(d.id)));
+        docs.forEach(d => { if (!existing.has(String(d.id))) bucket.push(d); });
+      } catch (e) {
+        console.warn('페이지 로드 실패', e);
+      }
+    }
+
+    // 3) 그래도 부족하면 seen 제외 완화해서 채우기
+    if (bucket.length < want) {
+      const more = (first?.documents || []).filter(passExclude); // seen 무시
+      const existing = new Set(bucket.map(d => String(d.id)));
+      more.forEach(d => { if (!existing.has(String(d.id))) bucket.push(d); });
+    }
+
+    if (bucket.length === 0) {
+      alert('조건에 맞는 결과가 거의 없어요. 반경이나 필터를 조금 완화해보세요.');
+      return;
+    }
+
+    // 4) 최종 랜덤 샘플
+    const shuffled = [...bucket].sort(() => 0.5 - Math.random());
+    const selection = shuffled.slice(0, want);
+
+    // 5) 화면 반영 + seen 갱신 (지도/Anchor는 그대로 유지)
+    setRestaurants(selection);
+    selection.forEach(r => seenIdsRef.current.add(String(r.id)));
+    if (seenIdsRef.current.size > 300) {
+      seenIdsRef.current = new Set([...seenIdsRef.current].slice(-200));
+    }
+  };
+
+  /* === 6) 현위치 기반 검색 === */
+  const handleLocationClick = async () => {
+    if (!navigator.geolocation) {
+      alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setSearchCenter({ lat, lng });           // ★ 기준(Anchor) 갱신
+        setMyPosition({ lat, lng });
+        await fetchNearbyRestaurants(lng, lat);  // Kakao: x=lng, y=lat
+        seenIdsRef.current = new Set();          // 위치 바뀌면 중복 기록 초기화
+      },
+      (err) => {
+        console.error(err);
+        alert('위치를 가져오지 못했습니다.');
+      }
+    );
+  };
+
+  /* === 7) 북마크 토글 === */
+  const toggleBookmark = async (id, item) => {
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    const docId = String(id || item?.id);
+    try {
+      if (bookmarks[docId]) {
+        await removeBookmark(user.uid, docId);
+      } else {
+        await addBookmark(user.uid, { ...item, id: docId });
+      }
+      setBookmarkRandomSelection(null);
+    } catch (e) {
+      console.error('북마크 토글 실패:', e);
+    }
+  };
+
+  // 표시할 리스트 (모드에 따라)
   const displayRestaurants = isBookmarkMode
-    ? (bookmarkRandomSelection || Object.values(bookmarks))
+    ? bookmarkRandomSelection || Object.values(bookmarks)
     : restaurants;
+
+  // 필터/반경이 바뀔 때마다 중복 기록 초기화(선택적)
+  useEffect(() => {
+    seenIdsRef.current = new Set();
+  }, [includedCategory, excludedCategory, radius]);
 
   return (
     <div className="container">
-      {/* 상단 헤더 */}
+      {/* 헤더 */}
       <div className="header">
-        <h1>오늘 뭐 먹지 ? </h1>
+        <h1 className="header-title">오늘 뭐 먹지 ? </h1>
+
         {user ? (
           <div className="user-info">
-            <span className="welcome-msg">
-              환영합니다 {user.displayName}님!
-            </span>
+            <span className="welcome-msg">환영합니다 {user.displayName}님!</span>
             <button
               className="bookmark-btn"
-              onClick={() => setIsBookmarkMode(prev => !prev)}
+              onClick={() => setIsBookmarkMode((prev) => !prev)}
+              title="북마크 모드 전환"
             >
-              {isBookmarkMode ? "일반 모드" : "북마크 모드"}
+              {isBookmarkMode ? '일반 모드' : '북마크 모드'}
             </button>
-            <button onClick={handleLogout} className="logout-btn">
+            <button onClick={async () => await signOut(auth)} className="logout-btn">
               로그아웃
             </button>
           </div>
         ) : (
           <div className="auth-buttons">
-            <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>로그인</button>
-            <button onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}>회원가입</button>
+            <button
+              onClick={() => {
+                setAuthMode('login');
+                setAuthModalOpen(true);
+              }}
+            >
+              로그인
+            </button>
+            <button
+              onClick={() => {
+                setAuthMode('signup');
+                setAuthModalOpen(true);
+              }}
+            >
+              회원가입
+            </button>
           </div>
         )}
       </div>
 
-      {/* 검색, 지도, 추천, 리스트 UI는 북마크 모드/일반 모드 동일하게 표시 */}
+      {/* 검색 */}
       <div className="search-row">
         <input
           type="text"
@@ -306,48 +406,55 @@ const App = () => {
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleSearch();
-            }
+            if (e.key === 'Enter') handleSearch();
           }}
         />
         <button onClick={handleSearch}>검색</button>
       </div>
 
+      {/* 검색 결과 */}
       {searchResults.length > 0 && (
         <div className="scrollable-list">
-          {searchResults.map((result, index) => (
-            <div key={index} onClick={() => handleSelectAddress(result)}>
+          {searchResults.map((result, idx) => (
+            <div
+              className="search-result-item"
+              key={idx}
+              onClick={() => handleSelectAddress(result)}
+            >
               {result.address_name} {result.place_name ? `(${result.place_name})` : ''}
             </div>
           ))}
         </div>
       )}
 
+      {/* 지도 (Anchor를 center로 사용) */}
       <MapComponent
         mapLoaded={mapLoaded}
-        mapCenter={mapCenter}
+        mapCenter={searchCenter} 
         restaurants={displayRestaurants}
         radius={radius}
         myPosition={myPosition}
         bookmarks={bookmarks}
       />
 
-      {/* 안내 메시지 표시 */}
-      {noIncludedMessage && (
-        <div className="result-message">{noIncludedMessage}</div>
-      )}
+      {/* 안내 메시지 */}
+      {noIncludedMessage && <div className="result-message">{noIncludedMessage}</div>}
 
+      {/* 리스트 */}
       <RestaurantList
         restaurants={displayRestaurants}
-        onSelect={handleSelectRestaurant}
+        onSelect={setSelectedRestaurant}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
       />
 
+      {/* 컨트롤들 */}
       <div style={{ textAlign: 'center', margin: '10px 0' }}>
-        <button onClick={handleLocationClick}>현위치</button>
+        <button className="location-btn" onClick={handleLocationClick}>
+          현위치
+        </button>
       </div>
+
       <RadiusInput setRadius={setRadius} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -358,9 +465,12 @@ const App = () => {
           value={count || ''}
           onChange={(e) => setCount(Number(e.target.value) || 0)}
         />
-        <button style={{ width: '210px' }} onClick={handleSpin}>랜덤 추천</button>
+        <button className="rand-btn" style={{ width: 210 }} onClick={handleSpin}>
+          랜덤 추천
+        </button>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0px' }}>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 0 }}>
         <input
           type="text"
           placeholder="추천할 카테고리 (예: 한식)"
@@ -376,11 +486,7 @@ const App = () => {
       </div>
 
       {/* 인증 모달 */}
-      <AuthModal
-        mode={authMode}
-        open={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-      />
+      <AuthModal mode={authMode} open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );
 };
