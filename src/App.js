@@ -435,6 +435,7 @@ const App = () => {
         radius={radius}
         myPosition={myPosition}
         bookmarks={bookmarks}
+        selectedRestaurant={selectedRestaurant}
       />
 
       {/* 안내 메시지 */}

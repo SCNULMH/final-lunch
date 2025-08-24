@@ -24,14 +24,17 @@ const MapComponent = ({
   mapCenter,
   radius,
   myPosition,
-  bookmarks = {}
+  bookmarks = {},
+  /** 리스트에서 선택된 식당(선택) */
+  selectedRestaurant = null,
 }) => {
-  const containerRef = useRef(null);
-  const mapRef       = useRef(null);      // kakao.maps.Map
-  const myMarkerRef  = useRef(null);      // 내 위치 마커
-  const circleRef    = useRef(null);      // 반경 원
-  const markersRef   = useRef([]);        // 식당 마커들
-  const infoRef      = useRef(null);      // 공용 InfoWindow
+  const containerRef   = useRef(null);
+  const mapRef         = useRef(null);      // kakao.maps.Map
+  const myMarkerRef    = useRef(null);      // 내 위치 마커
+  const circleRef      = useRef(null);      // 반경 원
+  const markersRef     = useRef([]);        // 모든 마커 배열
+  const markerByIdRef  = useRef(new Map()); // id -> marker
+  const infoRef        = useRef(null);      // 공용 InfoWindow
 
   // 1) 지도 최초 생성 (한 번만)
   useEffect(() => {
@@ -47,7 +50,7 @@ const MapComponent = ({
     mapRef.current.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
   }, [mapLoaded, mapCenter]);
 
-  // 2) 지도 중심 이동
+  // 2) 지도 중심 이동(앵커 변경 시에만)
   useEffect(() => {
     if (!mapRef.current || !window.kakao) return;
     const { kakao } = window;
@@ -60,12 +63,10 @@ const MapComponent = ({
     if (!mapRef.current || !window.kakao) return;
     const { kakao } = window;
 
-    // 기존 마커 제거
     if (myMarkerRef.current) {
       myMarkerRef.current.setMap(null);
       myMarkerRef.current = null;
     }
-
     if (myPosition?.lat && myPosition?.lng) {
       const pos = new kakao.maps.LatLng(myPosition.lat, myPosition.lng);
       const marker = new kakao.maps.Marker({
@@ -77,7 +78,6 @@ const MapComponent = ({
       marker.setMap(mapRef.current);
       myMarkerRef.current = marker;
 
-      // 간단한 인포
       const info = new kakao.maps.InfoWindow({
         content: '<div style="padding:5px;color:#d32f2f;">내 위치</div>',
       });
@@ -90,17 +90,15 @@ const MapComponent = ({
     if (!mapRef.current || !window.kakao) return;
     const { kakao } = window;
 
-    // 기존 원 제거
     if (circleRef.current) {
       circleRef.current.setMap(null);
       circleRef.current = null;
     }
-
     const center = new kakao.maps.LatLng(mapCenter.lat, mapCenter.lng);
     circleRef.current = new kakao.maps.Circle({
       map: mapRef.current,
       center,
-      radius: radius,
+      radius,
       strokeWeight: 2,
       strokeColor: '#75B8FA',
       strokeOpacity: 0.7,
@@ -109,16 +107,16 @@ const MapComponent = ({
     });
   }, [mapCenter, radius]);
 
-  // 5) 식당 마커 업데이트 (목록/북마크 변경 시)
+  // 5) 식당 마커 업데이트
   useEffect(() => {
     if (!mapRef.current || !window.kakao) return;
     const { kakao } = window;
 
-    // 기존 마커 제거
+    // 기존 마커 정리
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
+    markerByIdRef.current.clear();
 
-    // 인포윈도우 없으면 생성
     if (!infoRef.current) {
       infoRef.current = new kakao.maps.InfoWindow({ removable: false });
     }
@@ -136,27 +134,68 @@ const MapComponent = ({
       });
       marker.setMap(mapRef.current);
 
+      const detailUrl =
+        r.place_url ||
+        `https://map.kakao.com/link/search/${encodeURIComponent(r.place_name || '')}`;
+
+      const html =
+        `<div style="padding:8px 10px;">
+          <div style="font-weight:bold;margin-bottom:4px;">${r.place_name || ''}</div>
+          <div style="font-size:12px;color:#666;margin-bottom:6px;">${r.road_address_name || r.address_name || ''}</div>
+          <a href="${detailUrl}" target="_blank" rel="noreferrer"
+            style="display:inline-block;padding:6px 10px;background:#43A047;color:#fff;border-radius:8px;font-size:12px;text-decoration:none;">
+            상세보기
+          </a>
+        </div>`;
+
+      // 단일 클릭: 인포윈도우 열고 패닝
       kakao.maps.event.addListener(marker, 'click', () => {
-        const html = `
-          <div style="padding:8px 10px;">
-            <div style="font-weight:bold;margin-bottom:4px;">${r.place_name || ''}</div>
-            <div style="font-size:12px;color:#666;">${r.road_address_name || r.address_name || ''}</div>
-          </div>`;
         infoRef.current.setContent(html);
         infoRef.current.open(mapRef.current, marker);
+        mapRef.current.panTo(marker.getPosition());
+      });
+
+      // 더블 클릭: 새 탭으로 상세 페이지
+      kakao.maps.event.addListener(marker, 'dblclick', () => {
+        window.open(detailUrl, '_blank', 'noopener,noreferrer');
       });
 
       markersRef.current.push(marker);
+      const key = String(r.id ?? `${lat},${lng}`);
+      markerByIdRef.current.set(key, marker);
     });
 
-    // cleanup: 언마운트 시 마커 제거
     return () => {
       markersRef.current.forEach(m => m.setMap(null));
       markersRef.current = [];
+      markerByIdRef.current.clear();
     };
   }, [restaurants, bookmarks]);
 
-  // 6) 언마운트 클린업
+  // 6) 리스트에서 선택된 식당이 바뀌면 부드럽게 패닝 + 인포윈도우 표시
+  useEffect(() => {
+    if (!selectedRestaurant || !mapRef.current || !window.kakao) return;
+    const { kakao } = window;
+
+    const key = String(selectedRestaurant.id ?? `${selectedRestaurant.y},${selectedRestaurant.x}`);
+    const marker = markerByIdRef.current.get(key);
+
+    const lat = parseFloat(selectedRestaurant.y);
+    const lng = parseFloat(selectedRestaurant.x);
+    const pos = (!Number.isNaN(lat) && !Number.isNaN(lng))
+      ? new kakao.maps.LatLng(lat, lng)
+      : null;
+
+    // 마커가 이미 있으면 그 마커로, 없으면 좌표로 이동
+    if (marker) {
+      mapRef.current.panTo(marker.getPosition());
+      kakao.maps.event.trigger(marker, 'click'); // 클릭 이벤트 강제 → 인포윈도우 표시
+    } else if (pos) {
+      mapRef.current.panTo(pos);
+    }
+  }, [selectedRestaurant]);
+
+  // 7) 언마운트 클린업
   useEffect(() => {
     return () => {
       if (myMarkerRef.current) myMarkerRef.current.setMap(null);
@@ -165,6 +204,7 @@ const MapComponent = ({
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
       }
+      markerByIdRef.current.clear();
       if (infoRef.current) {
         infoRef.current.close();
         infoRef.current = null;
@@ -177,9 +217,7 @@ const MapComponent = ({
     <div
       ref={containerRef}
       id="map"
-      className="map-area"   // styles.css의 디자인과 맞춤
-      // 스타일이 필요하면 아래 높이 조절 (기본은 .map-area가 220px)
-      // style={{ height: 260 }}
+      className="map-area"
     />
   );
 };
