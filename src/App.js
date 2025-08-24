@@ -10,8 +10,8 @@ import { auth } from './firebase';
 import { subscribeBookmarks, addBookmark, removeBookmark } from './services/bookmark';
 import './styles.css';
 
-const REST_API_KEY = '25d26859dae2a8cb671074b910e16912';
-const JAVASCRIPT_API_KEY = '51120fdc1dd2ae273ccd643e7a301c77';
+const REST_API_KEY = process.env.REACT_APP_KAKAO_REST_KEY || '';
+const JAVASCRIPT_API_KEY = process.env.REACT_APP_KAKAO_JS_KEY || '';
 const KAKAO_HEADERS = { Authorization: `KakaoAK ${REST_API_KEY}` };
 
 /** 포함/제외 스코프 안에서 '한 페이지'를 가져오는 헬퍼
