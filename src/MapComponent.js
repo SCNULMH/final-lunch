@@ -1,21 +1,33 @@
 // src/MapComponent.js
 import React, { useEffect, useRef } from 'react';
 
-const RED_MARKER_IMG  = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png';
-const BLUE_MARKER_IMG = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png'; // 북마크(별)
-const SPOT_MARKER_IMG = 'http://t1.daumcdn.net/localimg/localimages/07/2018/pc/img/marker_spot.png'; // 내 위치
+const RED_MARKER_IMG  = `${process.env.PUBLIC_URL}/markers/일반.png`;     // 일반
+const BLUE_MARKER_IMG = `${process.env.PUBLIC_URL}/markers/즐겨찾기.png`; // 북마크
+const SPOT_MARKER_IMG = `${process.env.PUBLIC_URL}/markers/현위치.png`;   // 내 위치
+
+// 원하는 크기만 숫자 바꿔도 됨
+const SIZES = {
+  normal:   { w: 36, h: 44 }, // 일반/즐겨찾기
+  favorite: { w: 36, h: 44 },
+  spot:     { w: 22, h: 32 }, // 현위치
+};
 
 function createMarkerImage(kakao, imgUrl) {
   if (!kakao) return null;
-  if (imgUrl === SPOT_MARKER_IMG) {
-    const size = new kakao.maps.Size(24, 35);
-    const opt  = { offset: new kakao.maps.Point(12, 35) };
-    return new kakao.maps.MarkerImage(imgUrl, size, opt);
-  } else {
-    const size = new kakao.maps.Size(64, 69);
-    const opt  = { offset: new kakao.maps.Point(27, 69) };
-    return new kakao.maps.MarkerImage(imgUrl, size, opt);
-  }
+
+  const which =
+    imgUrl === SPOT_MARKER_IMG ? 'spot' :
+    imgUrl === BLUE_MARKER_IMG ? 'favorite' : 'normal';
+
+  const { w, h } = SIZES[which];
+  const ax = Math.round(w / 2);
+  const ay = h;
+
+  return new kakao.maps.MarkerImage(
+    imgUrl,
+    new kakao.maps.Size(w, h),
+    { offset: new kakao.maps.Point(ax, ay) }
+  );
 }
 
 const MapComponent = ({
