@@ -7,8 +7,8 @@ const SPOT_MARKER_IMG = `${process.env.PUBLIC_URL}/markers/현위치.png`;   // 
 
 // 원하는 크기만 숫자 바꿔도 됨
 const SIZES = {
-  normal:   { w: 36, h: 44 }, // 일반/즐겨찾기
-  favorite: { w: 36, h: 44 },
+  normal:   { w: 36, h: 36 }, // 일반/즐겨찾기
+  favorite: { w: 42, h: 42 },
   spot:     { w: 22, h: 32 }, // 현위치
 };
 
@@ -47,7 +47,7 @@ const MapComponent = ({
   const markersRef     = useRef([]);        // 모든 마커 배열
   const markerByIdRef  = useRef(new Map()); // id -> marker
   const infoRef        = useRef(null);      // 공용 InfoWindow
-
+  
   // 1) 지도 최초 생성 (한 번만)
   useEffect(() => {
     if (!mapLoaded || !window.kakao || mapRef.current || !containerRef.current) return;
@@ -62,6 +62,19 @@ const MapComponent = ({
     mapRef.current.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
   }, [mapLoaded, mapCenter]);
 
+  useEffect(() => {
+  const { kakao } = window;
+    if (!kakao) return;
+
+    const handleCloseInfo = () => {
+      if (infoRef.current) infoRef.current.close();
+    };
+    document.addEventListener('closeInfo', handleCloseInfo);
+
+    return () => {
+      document.removeEventListener('closeInfo', handleCloseInfo);
+    };
+  }, []);
   // 2) 지도 중심 이동(앵커 변경 시에만)
   useEffect(() => {
     if (!mapRef.current || !window.kakao) return;
@@ -130,7 +143,7 @@ const MapComponent = ({
     markerByIdRef.current.clear();
 
     if (!infoRef.current) {
-      infoRef.current = new kakao.maps.InfoWindow({ removable: false });
+      infoRef.current = new kakao.maps.InfoWindow({ removable: true });
     }
 
     restaurants.forEach((r) => {
@@ -151,14 +164,19 @@ const MapComponent = ({
         `https://map.kakao.com/link/search/${encodeURIComponent(r.place_name || '')}`;
 
       const html =
-        `<div style="padding:8px 10px;">
-          <div style="font-weight:bold;margin-bottom:4px;">${r.place_name || ''}</div>
-          <div style="font-size:12px;color:#666;margin-bottom:6px;">${r.road_address_name || r.address_name || ''}</div>
-          <a href="${detailUrl}" target="_blank" rel="noreferrer"
-            style="display:inline-block;padding:6px 10px;background:#43A047;color:#fff;border-radius:8px;font-size:12px;text-decoration:none;">
-            상세보기
-          </a>
+      `<div style="padding:8px 10px; position:relative; max-width:200px;">
+        <div style="font-weight:bold;margin-bottom:4px;">
+          ${r.place_name || ''}
+        </div>
+        <div style="font-size:12px;color:#666;margin-bottom:6px;">
+          ${r.road_address_name || r.address_name || ''}
+        </div>
+        <a href="${detailUrl}" target="_blank" rel="noreferrer"
+          style="display:inline-block;padding:6px 10px;background:#43A047;color:#fff;border-radius:8px;font-size:12px;text-decoration:none;">
+          상세보기
+        </a>
         </div>`;
+
 
       // 단일 클릭: 인포윈도우 열고 패닝
       kakao.maps.event.addListener(marker, 'click', () => {

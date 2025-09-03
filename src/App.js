@@ -1,4 +1,4 @@
-// src/App.js
+// src/App.js - UI/UX 개선 버전
 
 import React, { useState, useEffect, useRef } from 'react';
 import MapComponent from './MapComponent';
@@ -38,6 +38,7 @@ async function fetchPlacesPage({ x, y, radius, include = '', page = 1, size = 15
 const App = () => {
   // 인증
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // 지도/검색 기준(Anchor) — 주소 선택/현위치에서만 갱신, 랜덤 추천 중엔 유지
   const [searchCenter, setSearchCenter] = useState({ lat: 34.9687735, lng: 127.4802359 });
@@ -53,7 +54,7 @@ const App = () => {
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [includedCategory, setIncludedCategory] = useState('');
   const [excludedCategory, setExcludedCategory] = useState('');
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(5);
   const [noIncludedMessage, setNoIncludedMessage] = useState('');
 
   // 북마크
@@ -108,6 +109,7 @@ const App = () => {
 
   /* === 3) 주소/키워드 검색 === */
   const fetchAddressData = async (query) => {
+    setIsLoading(true);
     const addressUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}`;
     const keywordUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}`;
 
@@ -142,11 +144,13 @@ const App = () => {
     } catch (e) {
       console.error(e);
       alert('검색 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSearch = async () => {
-    if (!address) {
+    if (!address.trim()) {
       alert('주소를 입력해 주세요.');
       return;
     }
@@ -155,7 +159,7 @@ const App = () => {
 
   const handleSelectAddress = (result) => {
     const center = { lat: parseFloat(result.y), lng: parseFloat(result.x) };
-    setAddress(result.address_name);
+    setAddress(result.address_name || result.place_name);
     setSearchCenter(center);                   // ★ 기준(Anchor) 갱신
     fetchNearbyRestaurants(center.lng, center.lat);
     setSearchResults([]);
@@ -165,6 +169,7 @@ const App = () => {
 
   /* === 4) 반경 내 식당 조회(초기 표시용) === */
   const fetchNearbyRestaurants = async (x, y) => {
+    setIsLoading(true);
     let all = [];
     for (let page = 1; page <= 3; page++) {
       const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(
@@ -186,21 +191,27 @@ const App = () => {
       }
     }
     if (all.length > 0) {
-      setRestaurants(all); // 초기 화면에는 전체 보여줌
+      setRestaurants(all); // 초기 화면엔 전체 보여줌
     } else {
       alert('근처에 식당이 없습니다.');
     }
+    setIsLoading(false);
   };
 
   /* === 5) 랜덤 추천 (필터 스코프에서 '새로 검색' 방식, Anchor 고정) === */
   const handleSpin = async () => {
+    if (isLoading) return;
+    
     const pickCount = count || 5;
+    setIsLoading(true);
+    setNoIncludedMessage('');
 
     // 북마크 모드: 네트워크 X, 북마크 풀에서만
     if (isBookmarkMode) {
       const base = Object.values(bookmarks || {});
       if (base.length === 0) {
         alert('북마크한 식당이 없습니다.');
+        setIsLoading(false);
         return;
       }
 
@@ -222,6 +233,7 @@ const App = () => {
 
       const selection = [...pool].sort(() => 0.5 - Math.random()).slice(0, pickCount);
       setBookmarkRandomSelection(selection);
+      setIsLoading(false);
       return;
     }
 
@@ -231,77 +243,79 @@ const App = () => {
     const inc = (includedCategory || '').trim();
     const exList = (excludedCategory || '').split(',').map(s => s.trim()).filter(Boolean);
 
-    // 1) 1페이지로 전체 가용량 파악
-    let first;
     try {
-      first = await fetchPlacesPage({ x, y, radius, include: inc, page: 1, size: 15 });
+      // 1) 1페이지로 전체 가용량 파악
+      const first = await fetchPlacesPage({ x, y, radius, include: inc, page: 1, size: 15 });
+      const total = Math.min(first?.meta?.pageable_count || 0, 675); // Kakao: 최대 45p*15
+      
+      if (total === 0) {
+        setNoIncludedMessage(inc ? `"${inc}" 음식점이 주변에 없어 랜덤 음식점을 안내합니다.` : '');
+      } else {
+        setNoIncludedMessage('');
+      }
+      
+      const totalPages = Math.max(1, Math.min(45, Math.ceil(total / 15)));
+
+      // 2) 임의 페이지를 여러 번 시도하며 새 아이템 수집
+      const want = pickCount;
+      const bucket = [];
+      const usedPages = new Set();
+      const notSeen = (r) => !seenIdsRef.current.has(String(r.id));
+      const passExclude = (r) =>
+        exList.length ? !exList.some(c => (r.category_name || '').includes(c)) : true;
+
+      // 첫 페이지 결과 활용
+      const primeDocs = (first?.documents || []).filter(passExclude).filter(notSeen);
+      bucket.push(...primeDocs);
+
+      // 부족하면 랜덤 페이지 더 긁기 (최대 8회)
+      for (let tries = 0; bucket.length < want && tries < 8; tries++) {
+        let p;
+        for (let guard = 0; guard < 5; guard++) {
+          const cand = 1 + Math.floor(Math.random() * totalPages);
+          if (!usedPages.has(cand)) { p = cand; break; }
+        }
+        if (!p) p = 1 + Math.floor(Math.random() * totalPages);
+        usedPages.add(p);
+
+        try {
+          const data = p === 1 ? first : await fetchPlacesPage({ x, y, radius, include: inc, page: p, size: 15 });
+          const docs = (data?.documents || []).filter(passExclude).filter(notSeen);
+          const existing = new Set(bucket.map(d => String(d.id)));
+          docs.forEach(d => { if (!existing.has(String(d.id))) bucket.push(d); });
+        } catch (e) {
+          console.warn('페이지 로드 실패', e);
+        }
+      }
+
+      // 3) 그래도 부족하면 seen 제외 완화해서 채우기
+      if (bucket.length < want) {
+        const more = (first?.documents || []).filter(passExclude); // seen 무시
+        const existing = new Set(bucket.map(d => String(d.id)));
+        more.forEach(d => { if (!existing.has(String(d.id))) bucket.push(d); });
+      }
+
+      if (bucket.length === 0) {
+        alert('조건에 맞는 결과가 거의 없어요. 반경이나 필터를 조금 완화해보세요.');
+        setIsLoading(false);
+        return;
+      }
+
+      // 4) 최종 랜덤 샘플
+      const shuffled = [...bucket].sort(() => 0.5 - Math.random());
+      const selection = shuffled.slice(0, want);
+
+      // 5) 화면 반영 + seen 갱신 (지도/Anchor는 그대로 유지)
+      setRestaurants(selection);
+      selection.forEach(r => seenIdsRef.current.add(String(r.id)));
+      if (seenIdsRef.current.size > 300) {
+        seenIdsRef.current = new Set([...seenIdsRef.current].slice(-200));
+      }
     } catch (e) {
       console.error(e);
       alert('검색 중 오류가 발생했어요.');
-      return;
-    }
-
-    const total = Math.min(first?.meta?.pageable_count || 0, 675); // Kakao: 최대 45p*15
-    if (total === 0) {
-      setNoIncludedMessage(inc ? `"${inc}" 음식점이 주변에 없어 랜덤 음식점을 안내합니다.` : '');
-    } else {
-      setNoIncludedMessage('');
-    }
-    const totalPages = Math.max(1, Math.min(45, Math.ceil(total / 15)));
-
-    // 2) 임의 페이지를 여러 번 시도하며 새 아이템 수집
-    const want = pickCount;
-    const bucket = [];
-    const usedPages = new Set();
-    const notSeen = (r) => !seenIdsRef.current.has(String(r.id));
-    const passExclude = (r) =>
-      exList.length ? !exList.some(c => (r.category_name || '').includes(c)) : true;
-
-    // 첫 페이지 결과 활용
-    const primeDocs = (first?.documents || []).filter(passExclude).filter(notSeen);
-    bucket.push(...primeDocs);
-
-    // 부족하면 랜덤 페이지 더 긁기 (최대 8회)
-    for (let tries = 0; bucket.length < want && tries < 8; tries++) {
-      let p;
-      for (let guard = 0; guard < 5; guard++) {
-        const cand = 1 + Math.floor(Math.random() * totalPages);
-        if (!usedPages.has(cand)) { p = cand; break; }
-      }
-      if (!p) p = 1 + Math.floor(Math.random() * totalPages);
-      usedPages.add(p);
-
-      try {
-        const data = p === 1 ? first : await fetchPlacesPage({ x, y, radius, include: inc, page: p, size: 15 });
-        const docs = (data?.documents || []).filter(passExclude).filter(notSeen);
-        const existing = new Set(bucket.map(d => String(d.id)));
-        docs.forEach(d => { if (!existing.has(String(d.id))) bucket.push(d); });
-      } catch (e) {
-        console.warn('페이지 로드 실패', e);
-      }
-    }
-
-    // 3) 그래도 부족하면 seen 제외 완화해서 채우기
-    if (bucket.length < want) {
-      const more = (first?.documents || []).filter(passExclude); // seen 무시
-      const existing = new Set(bucket.map(d => String(d.id)));
-      more.forEach(d => { if (!existing.has(String(d.id))) bucket.push(d); });
-    }
-
-    if (bucket.length === 0) {
-      alert('조건에 맞는 결과가 거의 없어요. 반경이나 필터를 조금 완화해보세요.');
-      return;
-    }
-
-    // 4) 최종 랜덤 샘플
-    const shuffled = [...bucket].sort(() => 0.5 - Math.random());
-    const selection = shuffled.slice(0, want);
-
-    // 5) 화면 반영 + seen 갱신 (지도/Anchor는 그대로 유지)
-    setRestaurants(selection);
-    selection.forEach(r => seenIdsRef.current.add(String(r.id)));
-    if (seenIdsRef.current.size > 300) {
-      seenIdsRef.current = new Set([...seenIdsRef.current].slice(-200));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -311,6 +325,8 @@ const App = () => {
       alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
       return;
     }
+    
+    setIsLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
@@ -323,6 +339,7 @@ const App = () => {
       (err) => {
         console.error(err);
         alert('위치를 가져오지 못했습니다.');
+        setIsLoading(false);
       }
     );
   };
@@ -351,7 +368,7 @@ const App = () => {
     ? bookmarkRandomSelection || Object.values(bookmarks)
     : restaurants;
 
-  // 필터/반경이 바뀔 때마다 중복 기록 초기화(선택적)
+  // 필터/반경이 바뀐 때마다 중복 기록 초기화(선택적)
   useEffect(() => {
     seenIdsRef.current = new Set();
   }, [includedCategory, excludedCategory, radius]);
@@ -360,7 +377,7 @@ const App = () => {
     <div className="container">
       {/* 헤더 */}
       <div className="header">
-        <h1 className="header-title">오늘 뭐 먹지 ? </h1>
+        <h1 className="header-title">오늘 뭐 먹지?</h1>
 
         {user ? (
           <div className="user-info">
@@ -408,8 +425,11 @@ const App = () => {
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSearch();
           }}
+          disabled={isLoading}
         />
-        <button onClick={handleSearch}>검색</button>
+        <button onClick={handleSearch} disabled={isLoading}>
+          {isLoading ? '검색중...' : '검색'}
+        </button>
       </div>
 
       {/* 검색 결과 */}
@@ -421,7 +441,8 @@ const App = () => {
               key={idx}
               onClick={() => handleSelectAddress(result)}
             >
-              {result.address_name} {result.place_name ? `(${result.place_name})` : ''}
+              {result.address_name || result.place_name} 
+              {result.place_name && result.address_name ? ` (${result.place_name})` : ''}
             </div>
           ))}
         </div>
@@ -450,44 +471,74 @@ const App = () => {
       />
 
       {/* 컨트롤들 */}
-      <div style={{ textAlign: 'center', margin: '10px 0' }}>
-        <button className="location-btn" onClick={handleLocationClick}>
-          현위치
+      <div style={{ textAlign: 'center', margin: '16px 0' }}>
+        <button 
+          className="location-btn" 
+          onClick={handleLocationClick}
+          disabled={isLoading}
+        >
+          {isLoading ? '위치 찾는중...' : '내 위치로'}
         </button>
       </div>
 
       <RadiusInput setRadius={setRadius} />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        gap: '16px',
+        margin: '16px 0',
+        flexWrap: 'wrap'
+      }}>
         <input
           type="number"
           className="recommend-count"
           placeholder="추천 개수"
           value={count || ''}
           onChange={(e) => setCount(Number(e.target.value) || 0)}
+          min="1"
+          max="15"
+          style={{ width: '120px' }}
         />
-        <button className="rand-btn" style={{ width: 210 }} onClick={handleSpin}>
-          랜덤 추천
+        <button 
+          className={`rand-btn ${isLoading ? 'loading' : ''}`}
+          onClick={handleSpin}
+          disabled={isLoading}
+        >
+          {isLoading ? '추천중...' : '랜덤 추천'}
         </button>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 0 }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        gap: '12px',
+        margin: '16px 0',
+        flexWrap: 'wrap'
+      }}>
         <input
           type="text"
           placeholder="추천할 카테고리 (예: 한식)"
           value={includedCategory}
           onChange={(e) => setIncludedCategory(e.target.value || '')}
+          style={{ flex: 1, minWidth: '200px' }}
         />
         <input
           type="text"
           placeholder="제외할 카테고리 (쉼표로 구분)"
           value={excludedCategory}
           onChange={(e) => setExcludedCategory(e.target.value || '')}
+          style={{ flex: 1, minWidth: '200px' }}
         />
       </div>
 
       {/* 인증 모달 */}
-      <AuthModal mode={authMode} open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+      <AuthModal 
+        mode={authMode} 
+        open={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+      />
     </div>
   );
 };
