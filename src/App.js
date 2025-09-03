@@ -7,6 +7,7 @@ import Controls from './components/Controls';
 import useKakaoLoader from './hooks/useKakaoLoader';
 import useAuthBookmarks from './hooks/useAuthBookmarks';
 import useGeolocation from './hooks/useGeolocation';
+import AuthModal from './components/AuthModal';
 import { fetchPlacesPage, fetchNearbyRestaurants, fetchAddressAndKeyword } from './services/search';
 import './styles.css';
 
@@ -32,6 +33,8 @@ export default function App() {
   const [noIncludedMessage, setNoIncludedMessage] = useState('');
   const [isBookmarkMode, setIsBookmarkMode] = useState(false);
   const [bookmarkRandomSelection, setBookmarkRandomSelection] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
   const seenIdsRef = useRef(new Set());
 
   // 검색
@@ -149,20 +152,27 @@ export default function App() {
       {/* 헤더 */}
       <div className="header">
         <h1 className="header-title">오늘 뭐 먹지?</h1>
-        {user ? (
-          <div className="user-info">
-            <span className="welcome-msg">환영합니다 {user.displayName}님!</span>
-            <button className="bookmark-btn" onClick={() => setIsBookmarkMode(v => !v)}>
-              {isBookmarkMode ? '일반 모드' : '북마크 모드'}
-            </button>
-            <button onClick={logout} className="logout-btn">로그아웃</button>
-          </div>
-        ) : (
-          <div className="auth-buttons">
-            {/* 기존 AuthModal 그대로 사용 */}
-          </div>
-        )}
+    {user ? (
+      <div className="user-info">
+        <span className="welcome-msg">환영합니다 {user.displayName}님!</span>
+        <button className="bookmark-btn" onClick={() => setIsBookmarkMode(v => !v)}>
+          {isBookmarkMode ? '일반 모드' : '북마크 모드'}
+        </button>
+        <button onClick={logout} className="logout-btn">로그아웃</button>
       </div>
+    ) : (
+      <div className="auth-buttons">
+        <button onClick={() => { setAuthMode('login'); setAuthOpen(true); }}>로그인</button>
+        <button onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}>회원가입</button>
+      </div>
+    )}
+
+    <AuthModal
+      mode={authMode}
+      open={authOpen}
+      onClose={() => setAuthOpen(false)}
+    />
+          </div>
 
       {/* 검색 */}
       <SearchBar
