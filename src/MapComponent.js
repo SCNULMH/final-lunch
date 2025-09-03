@@ -62,19 +62,6 @@ const MapComponent = ({
     mapRef.current.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
   }, [mapLoaded, mapCenter]);
 
-  useEffect(() => {
-  const { kakao } = window;
-    if (!kakao) return;
-
-    const handleCloseInfo = () => {
-      if (infoRef.current) infoRef.current.close();
-    };
-    document.addEventListener('closeInfo', handleCloseInfo);
-
-    return () => {
-      document.removeEventListener('closeInfo', handleCloseInfo);
-    };
-  }, []);
   // 2) 지도 중심 이동(앵커 변경 시에만)
   useEffect(() => {
     if (!mapRef.current || !window.kakao) return;
