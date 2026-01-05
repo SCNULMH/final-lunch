@@ -1,17 +1,38 @@
-/* ===== 웹폰트 적용 ===== */
-@font-face {
-  font-family: 'Ownglyph_ParkDaHyun';
-  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
+/* =========================================================
+   1) THEME TOKENS
+========================================================= */
+:root{
+  --font: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
+
+  --bg: #f4f4f9;
+  --card: #ffffff;
+  --text: #222;
+
+  --primary: #9abf7f;
+  --primary-dark: #2e7d32;
+  --primary-darker: #1b5e20;
+  --accent: #FFD600;
+
+  --muted: #666;
+  --line: #e6e6e6;
+
+  --shadow-md: 0 8px 32px rgba(56,142,60,0.12);
+  --shadow-sm: 0 2px 10px rgba(0,0,0,0.05);
+  --shadow-soft: 0 1px 8px rgba(0,0,0,0.04);
+
+  --r-lg: 32px;
+  --r-md: 18px;
+  --r-sm: 14px;
 }
 
-/* ===== 전체 레이아웃 ===== */
-body {
-  font-family: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
+/* =========================================================
+   2) BASE
+========================================================= */
+body{
+  font-family: var(--font);
   font-size: 18px;
-  background: #f4f4f9;
-  color: #222;
+  background: var(--bg);
+  color: var(--text);
   margin: 0;
   min-height: 100vh;
   display: flex;
@@ -19,11 +40,13 @@ body {
   align-items: center;
 }
 
-/* ===== 컨테이너 ===== */
-.container {
-  background: #fff;
-  border-radius: 32px;
-  box-shadow: 0 8px 32px rgba(56,142,60,0.12);
+/* =========================================================
+   3) CONTAINER & HEADER
+========================================================= */
+.container{
+  background: var(--card);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
   max-width: 600px;
   width: 95vw;
   margin: 40px 0;
@@ -33,22 +56,20 @@ body {
   align-items: center;
 }
 
-/* ===== 헤더 ===== */
-.header {
+.header{
   width: 100%;
-  background: #388E3C;
-  border-radius: 32px 32px 0 0;
-  padding: 32px 40px 24px 40px;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
+  background: var(--primary);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 24px 32px 18px;
   box-sizing: border-box;
-  min-height: 80px;
-  gap: 20px;
   margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
-.header-title {
+
+.header-title{
   color: #fff;
   font-size: 2.1em;
   font-weight: bold;
@@ -57,59 +78,131 @@ body {
   white-space: nowrap;
 }
 
-/* ===== 로그인/회원가입, 환영/북마크 영역 ===== */
-.auth-buttons, .user-info {
-  display: flex;
-  gap: 18px;
+.header-row2{
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
+  gap: 12px;
 }
-.auth-buttons button, .user-info button {
-  background: #2e7031;
+
+.welcome-msg{
+  color: rgba(255,255,255,0.95);
+  font-size: 1.1em;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.welcome-msg--guest{
+  color: rgba(255,255,255,0.88);
+}
+
+.header-actions{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-self: end;
+}
+
+.header-actions button{
+  background: var(--primary);
   color: #fff;
   border: none;
   border-radius: 24px;
-  padding: 12px 28px;
-  font-size: 1.08em;
-  font-family: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
+  padding: 10px 22px;
+  font-size: 1.05em;
+  font-family: var(--font);
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(56, 142, 60, 0.13);
+  transition: background .2s, transform .1s;
+  box-shadow: 0 2px 8px rgba(56,142,60,0.13);
   white-space: nowrap;
-}
-.auth-buttons button:hover, .user-info button:hover {
-  background: #FFD600;
-  color: #388E3C;
-}
-.user-info .welcome-msg {
-  color: #fff;
-  font-size: 1.1em;
-  font-weight: bold;
-  margin-right: 8px;
-}
-.user-info .bookmark-btn {
-  background: #FFD600;
-  color: #222;
-  border: none;
-  border-radius: 18px;
-  padding: 8px 18px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-left: 4px;
-}
-.user-info .logout-btn {
-  background: #388E3C;
-  color: #fff;
-  border: 1.5px solid #fff;
-  border-radius: 18px;
-  padding: 8px 18px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-left: 4px;
+  margin: 0;
+  line-height: 1.3;
 }
 
-/* ===== 지도 영역 ===== */
-.map-area {
+.header-actions button:hover{
+  background: var(--accent);
+  color: #222;
+  transform: translateY(-1px);
+}
+
+.header-actions .bookmark-btn{
+  background: var(--accent);
+  color: #222;
+}
+
+.header-actions .bookmark-btn:hover{
+  background: #ffc400;
+}
+
+.header-actions .logout-btn{
+  background: transparent;
+  border: 1.5px solid rgba(255,255,255,0.8);
+  color: #fff;
+}
+
+.header-actions .logout-btn:hover{
+  background: rgba(255,255,255,0.15);
+  border-color: #fff;
+  color: #fff;
+}
+
+/* =========================================================
+   4) SEARCH
+========================================================= */
+.search-row{
+  display: flex;
+  width: 90%;
+  max-width: 500px;
+  margin: 28px auto 16px auto;
+}
+
+.search-row input[type="text"]{
+  flex: 1;
+  padding: 14px 22px;
+  border: none;
+  border-radius: 24px 0 0 24px;
+  background: #f4f4f4;
+  font-size: 1.13em;
+  font-family: var(--font);
+  outline: none;
+  box-shadow: 0 1px 8px rgba(56,142,60,0.07);
+  transition: background .2s, box-shadow .2s;
+}
+
+.search-row input[type="text"]:focus{
+  background: #e8f5e9;
+  box-shadow: 0 4px 16px rgba(56,142,60,0.13);
+}
+
+.search-row button{
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 0 24px 24px 0;
+  padding: 14px 28px;
+  font-size: 1.13em;
+  font-family: var(--font);
+  font-weight: bold;
+  box-shadow: 0 4px 16px rgba(76,175,80,0.13);
+  cursor: pointer;
+  transition: background .2s, box-shadow .2s, transform .1s;
+  margin-left: -1px;
+}
+
+.search-row button:hover{
+  background: var(--primary);
+  box-shadow: 0 6px 24px rgba(56,142,60,0.18);
+  transform: translateY(-2px) scale(1.03);
+}
+
+/* =========================================================
+   5) MAP
+========================================================= */
+.map-area{
   width: 90%;
   height: 220px;
   background: #eafbe7;
@@ -123,130 +216,10 @@ body {
   min-height: 120px;
 }
 
-/* ===== 검색창+버튼 한 줄로 딱 붙게 ===== */
-.search-row {
-  display: flex;
-  width: 90%;
-  max-width: 500px;
-  margin: 28px auto 16px auto;
-}
-.search-row input[type="text"] {
-  flex: 1;
-  padding: 14px 22px;
-  border: none;
-  border-radius: 24px 0 0 24px;
-  background: #f4f4f4;
-  font-size: 1.13em;
-  font-family: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
-  outline: none;
-  box-shadow: 0 1px 8px rgba(56,142,60,0.07);
-  transition: background 0.2s, box-shadow 0.2s;
-}
-.search-row input[type="text"]:focus {
-  background: #e8f5e9;
-  box-shadow: 0 4px 16px rgba(56, 142, 60, 0.13);
-}
-.search-row button {
-  background: #4CAF50;
-  color: #fff;
-  border: none;
-  border-radius: 0 24px 24px 0;
-  padding: 14px 28px;
-  font-size: 1.13em;
-  font-family: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
-  font-weight: bold;
-  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.13);
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-  margin-left: -1px;
-}
-.search-row button:hover {
-  background: #388E3C;
-  box-shadow: 0 6px 24px rgba(56, 142, 60, 0.18);
-  transform: translateY(-2px) scale(1.03);
-}
-
-/* ===== 입력 & 버튼(공통) ===== */
-input[type="text"],
-input[type="number"] {
-  border: none;
-  border-radius: 20px;
-  background: #f4f4f4;
-  padding: 13px 20px;
-  font-size: 1.13em;
-  font-family: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
-  margin: 8px 0;
-  box-shadow: 0 1px 8px rgba(56,142,60,0.07);
-  outline: none;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-input[type="text"]:focus,
-input[type="number"]:focus {
-  background: #e8f5e9;
-  box-shadow: 0 4px 16px rgba(56, 142, 60, 0.13);
-}
-
-button,
-input[type="button"],
-input[type="submit"] {
-  background: #4CAF50;
-  color: #fff;
-  border: none;
-  border-radius: 24px;
-  padding: 14px 28px;
-  font-size: 1.13em;
-  font-family: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
-  font-weight: bold;
-  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.13);
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-  margin: 8px 0;
-  display: inline-block;
-}
-button:hover,
-input[type="button"]:hover,
-input[type="submit"]:hover {
-  background: #388E3C;
-  box-shadow: 0 6px 24px rgba(56, 142, 60, 0.18);
-  transform: translateY(-2px) scale(1.03);
-}
-button:active,
-input[type="button"]:active,
-input[type="submit"]:active {
-  background: #2e7031;
-}
-
-/* ===== 특수 버튼(랜덤 추천, 설정, 현위치 등) ===== */
-.rand-btn,
-.setting-btn,
-.location-btn {
-  background: #43A047;
-  color: #fff;
-  border-radius: 24px;
-  padding: 16px 34px;
-  font-size: 1.18em;
-  font-family: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
-  font-weight: bold;
-  margin: 10px 0;
-  box-shadow: 0 4px 18px rgba(56, 142, 60, 0.13);
-  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-  border: none;
-}
-.rand-btn:hover,
-.setting-btn:hover,
-.location-btn:hover {
-  background: #388E3C;
-  box-shadow: 0 8px 28px rgba(56, 142, 60, 0.18);
-  transform: translateY(-2px) scale(1.04);
-}
-
-/* ===== 추천 개수와 랜덤추천 버튼 사이 간격 ===== */
-input[type="number"].recommend-count {
-  margin-right: 30px;
-}
-
-/* ===== 리스트 & 스크롤러 ===== */
-.restaurant-list {
+/* =========================================================
+   6) RESTAURANT LIST & CARDS
+========================================================= */
+.restaurant-list{
   width: 90%;
   max-height: 300px;
   overflow-y: auto;
@@ -254,101 +227,108 @@ input[type="number"].recommend-count {
   padding-right: 6px;
   border-radius: 18px;
   background-color: #f9f9f9;
-  box-shadow: 0 1px 8px rgba(56, 142, 60, 0.07);
+  box-shadow: 0 1px 8px rgba(56,142,60,0.07);
   scrollbar-width: thin;
   scrollbar-color: #d0d0d0 #f9f9f9;
 }
 
-/* 검색 결과 리스트 & 식당 리스트 컨테이너(2열) */
 .scrollable-list,
-#restaurantList {
+#restaurantList{
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  width: 86%;            /* 겹침 완화 */
-  max-height: 280px;     /* 살짝 줄임 */
+  width: 86%;
+  max-height: 280px;
   overflow-y: auto;
-  padding: 10px 12px;    /* 패딩 축소 */
+  padding: 10px 12px;
   margin-top: 12px;
   border-radius: 16px;
   background-color: #f9f9f9;
-  box-shadow: 0 1px 8px rgba(56, 142, 60, 0.07);
+  box-shadow: 0 1px 8px rgba(56,142,60,0.07);
   scrollbar-width: thin;
   scrollbar-color: #d0d0d0 #f9f9f9;
 }
 
-/* 마지막 카드: 아이템 수가 홀수일 때만 가운데 정렬 */
-#restaurantList .restaurant-card:last-child:nth-child(odd) {
-  grid-column: 1 / -1;   /* 한 줄 전체 사용 */
-  justify-self: center;  /* 가운데 배치 */
-  max-width: 360px;      /* 너무 넓지 않게 */
+#restaurantList .restaurant-card:last-child:nth-child(odd){
+  grid-column: 1 / -1;
+  justify-self: center;
+  max-width: 360px;
 }
 
-/* 각 카드가 그리드 셀에 맞게 */
-#restaurantList .restaurant-card {
+#restaurantList .restaurant-card{
   width: 100%;
   margin: 0;
 }
 
 .restaurant-list::-webkit-scrollbar,
 .scrollable-list::-webkit-scrollbar,
-#restaurantList::-webkit-scrollbar {
+#restaurantList::-webkit-scrollbar{
   width: 6px;
   background: #f9f9f9;
 }
+
 .restaurant-list::-webkit-scrollbar-thumb,
 .scrollable-list::-webkit-scrollbar-thumb,
-#restaurantList::-webkit-scrollbar-thumb {
+#restaurantList::-webkit-scrollbar-thumb{
   background: #d0d0d0;
   border-radius: 4px;
 }
+
 .restaurant-list::-webkit-scrollbar-thumb:hover,
 .scrollable-list::-webkit-scrollbar-thumb:hover,
-#restaurantList::-webkit-scrollbar-thumb:hover {
+#restaurantList::-webkit-scrollbar-thumb:hover{
   background: #b0b0b0;
 }
 
-/* ===== 검색 결과 항목 ===== */
-.search-result-item {
+.search-result-item{
   padding: 14px 10px;
   cursor: pointer;
   border-bottom: 1.5px solid #e0e0e0;
-  transition: background-color 0.3s;
+  transition: background-color .3s;
   border-radius: 10px;
 }
-.search-result-item:last-child { border-bottom: none; }
-.search-result-item:hover { background-color: #e0f2e9; }
 
-/* ===== 식당 카드 ===== */
-.restaurant-card {
+.search-result-item:last-child{ 
+  border-bottom: none; 
+}
+
+.search-result-item:hover{ 
+  background-color: #e0f2e9; 
+}
+
+.restaurant-card{
   background: #fff;
-  border-radius: 18px;   /* 22 → 18 */
-  box-shadow: 0 1px 10px rgba(56, 142, 60, 0.05);
-  margin-bottom: 0;      /* grid gap 사용 */
-  padding: 16px 14px;    /* 축소 */
+  border-radius: 18px;
+  box-shadow: 0 1px 10px rgba(56,142,60,0.05);
+  padding: 16px 14px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: box-shadow .2s, transform .2s;
   cursor: pointer;
   position: relative;
 }
-.restaurant-card:active, .restaurant-card:hover {
-  box-shadow: 0 4px 16px rgba(56, 142, 60, 0.12);
+
+.restaurant-card:active,
+.restaurant-card:hover{
+  box-shadow: 0 4px 16px rgba(56,142,60,0.12);
   transform: translateY(-1px) scale(1.005);
 }
-.restaurant-title {
+
+.restaurant-title{
   font-weight: bold;
-  font-size: 1.07em; /* 1.19 → 1.07 */
+  font-size: 1.07em;
   margin-bottom: 6px;
   color: #111;
 }
-.restaurant-meta {
+
+.restaurant-meta{
   color: #888;
-  font-size: 0.95em;  /* 1.0 → 0.95 */
+  font-size: 0.95em;
   margin-bottom: 4px;
 }
-.result-message {
+
+.result-message{
   color: #1976D2;
   background: #eafbe7;
   border-radius: 18px;
@@ -359,58 +339,127 @@ input[type="number"].recommend-count {
   font-size: 1.5em;
 }
 
-.detail-btn {
+.detail-btn{
   margin-top: 10px;
   padding: 9px 14px;
-  background: #4CAF50;
+  background: var(--primary-dark);
   color: #fff;
   border: none;
   border-radius: 12px;
   font-size: 0.97em;
   cursor: pointer;
   align-self: flex-end;
-  transition: background 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.09);
-}
-.detail-btn:hover, .detail-btn:active {
-  background: #388E3C;
+  transition: background .2s, box-shadow .2s;
+  box-shadow: 0 2px 8px rgba(76,175,80,0.09);
 }
 
-/* ===== 북마크 버튼 ===== */
-.bookmark-btn {
-  background: #FFD600;
-  color: #222;
+.detail-btn:hover,
+.detail-btn:active{
+  background: var(--primary-darker);
+}
+
+/* =========================================================
+   7) COMMON INPUT & BUTTON
+========================================================= */
+input[type="text"],
+input[type="number"]{
   border: none;
-  border-radius: 18px;
-  padding: 8px 18px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-left: 4px;
-  font-size: 1.08em;
+  border-radius: 20px;
+  background: #f4f4f4;
+  padding: 13px 20px;
+  font-size: 1.13em;
+  font-family: var(--font);
+  margin: 8px 0;
+  box-shadow: 0 1px 8px rgba(56,142,60,0.07);
+  outline: none;
+  transition: background .2s, box-shadow .2s;
 }
 
-/* ===== 인증 모달 ===== */
-.modal-backdrop {
+input[type="text"]:focus,
+input[type="number"]:focus{
+  background: #e8f5e9;
+  box-shadow: 0 4px 16px rgba(56,142,60,0.13);
+}
+
+button,
+input[type="button"],
+input[type="submit"]{
+  background: var(--primary-dark);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 14px 28px;
+  font-size: 1.13em;
+  font-family: var(--font);
+  font-weight: bold;
+  box-shadow: 0 4px 16px rgba(76,175,80,0.13);
+  cursor: pointer;
+  transition: background .2s, box-shadow .2s, transform .1s;
+  margin: 8px 0;
+  display: inline-block;
+}
+
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover{
+  background: var(--primary-darker);
+  transform: translateY(-2px) scale(1.03);
+}
+
+button:active,
+input[type="button"]:active,
+input[type="submit"]:active{
+  background: #2e7031;
+}
+
+.location-btn{
+  background: #43A047;
+  color: #fff;
+  border-radius: 24px;
+  padding: 16px 34px;
+  font-size: 1.18em;
+  font-family: var(--font);
+  font-weight: bold;
+  box-shadow: 0 4px 18px rgba(56,142,60,0.13);
+  border: none;
+}
+
+.location-btn:hover{
+  background: #388E3C;
+  box-shadow: 0 8px 28px rgba(56,142,60,0.18);
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* =========================================================
+   8) AUTH MODAL
+========================================================= */
+.modal-backdrop{
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0,0,0,0.4);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
 }
-.auth-modal {
+
+.auth-modal{
   background: #fff;
   border-radius: 22px;
   padding: 38px 28px;
-  box-shadow: 0 8px 32px rgba(56, 142, 60, 0.16);
+  box-shadow: 0 8px 32px rgba(56,142,60,0.16);
   min-width: 320px;
   max-width: 90vw;
 }
-.auth-modal h2 {
-  margin-top: 0;
+
+.auth-modal h2{ 
+  margin-top: 0; 
 }
-.auth-modal input {
+
+.auth-modal input{
   display: block;
   width: 100%;
   margin: 14px 0;
@@ -420,131 +469,444 @@ input[type="number"].recommend-count {
   border-radius: 10px;
   box-sizing: border-box;
 }
-.auth-modal .auth-buttons {
+
+.auth-modal .auth-buttons{
   display: flex;
   gap: 12px;
   margin-top: 22px;
 }
-.auth-modal button {
+
+.auth-modal button{
   flex: 1;
   padding: 12px;
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  transition: opacity 0.2s;
-  font-family: 'Ownglyph_ParkDaHyun', Arial, sans-serif;
+  transition: opacity .2s;
+  font-family: var(--font);
 }
-.auth-modal button[type="submit"] {
-  background: #4CAF50;
-  color: white;
+
+.auth-modal button[type="submit"]{
+  background: var(--primary-dark);
+  color: #fff;
 }
-.auth-modal button[type="button"] {
+
+.auth-modal button[type="button"]{
   background: #666;
-  color: white;
-}
-.auth-modal button:hover {
-  opacity: 0.85;
+  color: #fff;
 }
 
-/* ===== 결과 텍스트 ===== */
-.result {
-  margin: 18px 0;
+.auth-modal button:hover{ 
+  opacity: .85; 
+}
+
+/* =========================================================
+   9) CONTROLS
+========================================================= */
+.controls2{
+  width: 90%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.primary-cta2{
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+  font-size: 1.18em;
+  background: var(--primary-dark);
+  box-shadow: 0 10px 26px rgba(46,125,50,0.25);
+  margin: 0;
+}
+
+.primary-cta2:hover{
+  background: var(--primary-darker);
+  transform: translateY(-1px);
+}
+
+.exclude-box{
+  background: #fff;
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #f0f0f0;
+}
+
+.exclude-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.exclude-title{
   font-weight: bold;
-  color: #333;
+  color: #444;
 }
 
-/* ===== 반응형 디자인 ===== */
-@media (max-width: 900px) {
-  .container {
+.exclude-empty{
+  color: #666;
+  font-size: 0.95em;
+  padding: 6px 0;
+}
+
+.exclude-panel{
+  margin-top: 10px;
+  border-top: 1px dashed #e6e6e6;
+  padding-top: 10px;
+}
+
+.exclude-actions{
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.link-btn{
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-weight: bold;
+  font-size: 0.95em;
+  color: var(--primary-darker);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.link-btn:hover{
+  text-decoration: underline;
+  transform: none;
+}
+
+.mini-btn{
+  border-radius: 14px;
+  padding: 8px 10px;
+  font-size: 0.95em;
+  background: #f3f3f3;
+  color: #333;
+  box-shadow: none;
+  margin: 0;
+}
+
+.mini-btn:hover{ 
+  background: #e9e9e9; 
+  transform: none; 
+}
+
+.mini-btn.ghost{
+  background: #fff;
+  border: 1px solid #e0e0e0;
+}
+
+.chip-row{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-row.compact .chip{
+  padding: 8px 10px;
+  font-size: 0.95em;
+}
+
+.chip{
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #333;
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-weight: bold;
+  box-shadow: none;
+  margin: 0;
+  transition: transform .08s, background .2s, border .2s, color .2s;
+}
+
+.chip:hover{
+  background: #f7f7f7;
+  transform: translateY(-1px);
+}
+
+.chip--off{
+  background: #ffecec;
+  border-color: #ffcccc;
+  color: #b71c1c;
+}
+
+.advanced{
+  background: #f7f7f7;
+  border-radius: 18px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow-soft);
+}
+
+.advanced summary{
+  cursor: pointer;
+  font-weight: bold;
+  color: #444;
+}
+
+.advanced input[type="text"]{
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+}
+
+.hint{
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 6px;
+}
+
+.option-pill{
+  width: 100%;
+  background: #f0f6f1;
+  color: var(--primary-darker);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 1.02em;
+  font-weight: bold;
+  box-shadow: none;
+  border: 1px solid #dbe9dd;
+  margin: 0;
+}
+
+.option-pill:hover{
+  background: #e4f1e6;
+  transform: none;
+}
+
+/* =========================================================
+   10) BOTTOM SHEET
+========================================================= */
+.sheet-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.sheet{
+  width: min(600px, 100vw);
+  background: #fff;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.18);
+  padding: 10px 14px 14px;
+  animation: sheetUp 180ms ease-out;
+}
+
+@keyframes sheetUp{
+  from { 
+    transform: translateY(24px); 
+    opacity: .6; 
+  }
+  to { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+.sheet-handle{
+  width: 44px;
+  height: 5px;
+  border-radius: 999px;
+  background: #e5e5e5;
+  margin: 6px auto 10px;
+}
+
+.sheet-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.sheet-title{
+  font-weight: bold;
+  font-size: 1.15em;
+  color: #222;
+}
+
+.sheet-close{
+  background: transparent;
+  border: none;
+  color: #666;
+  font-weight: bold;
+  padding: 8px 10px;
+  border-radius: 12px;
+  box-shadow: none;
+  margin: 0;
+}
+
+.sheet-close:hover{
+  background: #f3f3f3;
+  transform: none;
+}
+
+.sheet-body{
+  padding: 12px 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sheet-section{
+  background: #f7faf7;
+  border: 1px solid #e6f0e7;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.field-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.field-label{
+  font-weight: bold;
+  color: var(--primary-darker);
+}
+
+.sheet-footer{
+  padding: 10px 4px 6px;
+}
+
+.sheet-done{
+  width: 100%;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 1.1em;
+  background: var(--primary-dark);
+  box-shadow: 0 10px 26px rgba(46,125,50,0.22);
+  margin: 0;
+}
+
+.sheet-done:hover{
+  background: var(--primary-darker);
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   11) RESPONSIVE
+========================================================= */
+@media (max-width: 900px){
+  .container{
     max-width: 97vw;
     border-radius: 24px;
     margin: 18px 0;
   }
-  .header {
-    padding: 18px 18px 12px 18px;
-    flex-direction: column;
-    align-items: flex-start;
-    border-radius: 18px 18px 0 0;
-    min-height: 70px;
+  
+  .header{
+    padding: 20px 24px 16px 24px;
     gap: 12px;
   }
-  .header-title {
-    font-size: 1.5em;
-    margin-bottom: 6px;
+  
+  .header-title{
+    font-size: 1.8em;
   }
-  .auth-buttons, .user-info {
-    width: 100%;
-    justify-content: flex-end;
-    gap: 8px;
+  
+  .header-actions button{
+    padding: 9px 18px;
+    font-size: 1em;
   }
-  .search-row, .restaurant-list, .map-area {
-    width: 98%;
+  
+  .search-row, 
+  .restaurant-list, 
+  .map-area{ 
+    width: 94%; 
   }
 }
 
-@media (max-width: 600px) {
-  .container {
+@media (max-width: 600px){
+  .container{
     max-width: 100vw;
     border-radius: 0;
     margin: 0;
   }
-  .header {
-    border-radius: 0 0 24px 24px;
-    padding: 14px 6px 8px 6px;
-    min-height: 56px;
+  
+  .header{
+    padding: 20px 16px 16px 16px;
+    border-radius: 0;
     gap: 8px;
   }
-  .header-title {
-    font-size: 1.08em;
-    margin-bottom: 0;
+
+  .header-title{
+    font-size: 1.5em;
   }
-  .auth-buttons, .user-info {
+
+  .header-row2{
     gap: 8px;
   }
-  .auth-buttons button, .user-info button {
-    padding: 8px 12px;
-    font-size: 0.97em;
-    border-radius: 14px;
+
+  .welcome-msg{
+    font-size: 0.95em;
   }
-  .search-row,
-  .restaurant-list,
-  .map-area {
-    width: 99%;
-    min-width: 0;
-    max-width: 100vw;
+
+  .header-actions{
+    gap: 6px;
   }
-  .search-row input[type="text"] {
-    font-size: 0.97em;
-    padding: 9px 10px;
-    border-radius: 12px 0 0 12px;
+
+  .header-actions button{
+    padding: 7px 12px;
+    font-size: 0.9em;
+    border-radius: 18px;
   }
-  .search-row button {
-    padding: 9px 12px;
-    font-size: 0.97em;
-    border-radius: 0 12px 12px 0;
+
+  .search-row, 
+  .restaurant-list, 
+  .map-area{
+    width: 96%;
   }
-  .restaurant-card {
-    padding: 12px 6px;
-    margin-bottom: 10px;
-    border-radius: 12px;
-  }
-  .restaurant-title { font-size: 1em; }
-  .restaurant-meta { font-size: 0.93em; }
-  .detail-btn { font-size: 0.97em; padding: 7px 10px; border-radius: 9px;}
-  .auth-modal { min-width: 90vw; padding: 18px 6px; border-radius: 14px;}
-  .rand-btn,
-  .setting-btn,
-  .location-btn {
-    padding: 10px 14px;
+  
+  .search-row input[type="text"]{
     font-size: 1em;
+    padding: 10px 14px;
+    border-radius: 16px 0 0 16px;
+  }
+  
+  .search-row button{
+    padding: 10px 16px;
+    font-size: 1em;
+    border-radius: 0 16px 16px 0;
+  }
+
+  .restaurant-card{
+    padding: 12px 10px;
     border-radius: 14px;
   }
-  .map-area {
-    padding: 10px;
-    border-radius: 14px;
-    min-height: 80px;
+  
+  .restaurant-title{ 
+    font-size: 1em; 
   }
-  input[type="number"].recommend-count {
-    margin-right: 16px;
+  
+  .restaurant-meta{ 
+    font-size: 0.9em; 
+  }
+  
+  .detail-btn{ 
+    font-size: 0.9em; 
+    padding: 7px 10px; 
+    border-radius: 10px; 
+  }
+
+  .auth-modal{
+    min-width: 90vw;
+    padding: 24px 16px;
+    border-radius: 16px;
+  }
+
+  .controls2{ 
+    width: 96%; 
   }
 }

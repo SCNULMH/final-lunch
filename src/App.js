@@ -148,73 +148,111 @@ export default function App() {
     : restaurants;
 
   return (
-    <div className="container">
-      {/* 헤더 */}
-      <div className="header">
-        <h1 className="header-title">오늘 뭐 먹지?</h1>
-    {user ? (
-      <div className="user-info">
-        <span className="welcome-msg">환영합니다 {user.displayName}님!</span>
-        <button className="bookmark-btn" onClick={() => setIsBookmarkMode(v => !v)}>
-          {isBookmarkMode ? '일반 모드' : '북마크 모드'}
-        </button>
-        <button onClick={logout} className="logout-btn">로그아웃</button>
-      </div>
-    ) : (
-      <div className="auth-buttons">
-        <button onClick={() => { setAuthMode('login'); setAuthOpen(true); }}>로그인</button>
-        <button onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}>회원가입</button>
-      </div>
-    )}
+  <div className="container">
+    {/* 헤더 */}
+    <div className="header">
+      {/* 1줄: 제목 */}
+      <h1 className="header-title">오늘 뭐 먹지?</h1>
 
+      {/* 2줄: 환영문 + 버튼 */}
+      {user ? (
+        <div className="header-row2">
+          <span className="welcome-msg">환영합니다 {user.displayName}님!</span>
+
+          <div className="header-actions">
+            <button
+              className="bookmark-btn"
+              onClick={() => setIsBookmarkMode((v) => !v)}
+            >
+              {isBookmarkMode ? "일반 모드" : "북마크 모드"}
+            </button>
+
+            <button onClick={logout} className="logout-btn">
+              로그아웃
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="header-row2">
+          <span className="welcome-msg welcome-msg--guest">
+            로그인해서 북마크를 저장해요
+          </span>
+
+          <div className="header-actions">
+            <button
+              onClick={() => {
+                setAuthMode("login");
+                setAuthOpen(true);
+              }}
+            >
+              로그인
+            </button>
+
+            <button
+              onClick={() => {
+                setAuthMode("signup");
+                setAuthOpen(true);
+              }}
+            >
+              회원가입
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* ✅ AuthModal은 container 안에 두되, header 밖에 두기 */}
     <AuthModal
       mode={authMode}
       open={authOpen}
       onClose={() => setAuthOpen(false)}
     />
-          </div>
 
-      {/* 검색 */}
-      <SearchBar
-        address={address}
-        setAddress={setAddress}
-        results={results}
-        onSearch={onSearch}
-        onSelect={onSelectAddress}
-        loading={isLoading}
-      />
+    {/* 검색 */}
+    <SearchBar
+      address={address}
+      setAddress={setAddress}
+      results={results}
+      onSearch={onSearch}
+      onSelect={onSelectAddress}
+      loading={isLoading}
+    />
 
-      {/* 지도 */}
-      <MapComponent
-        mapLoaded={mapLoaded}
-        mapCenter={searchCenter}
-        restaurants={displayRestaurants}
-        radius={radius}
-        myPosition={myPosition}
-        bookmarks={bookmarks}
-        selectedRestaurant={selectedRestaurant}
-      />
+    {/* 지도 */}
+    <MapComponent
+      mapLoaded={mapLoaded}
+      mapCenter={searchCenter}
+      restaurants={displayRestaurants}
+      radius={radius}
+      myPosition={myPosition}
+      bookmarks={bookmarks}
+      selectedRestaurant={selectedRestaurant}
+    />
 
-      {noIncludedMessage && <div className="result-message">{noIncludedMessage}</div>}
+    {noIncludedMessage && <div className="result-message">{noIncludedMessage}</div>}
 
-      {/* 리스트 */}
-      <RestaurantList
-        restaurants={displayRestaurants}
-        onSelect={setSelectedRestaurant}
-        bookmarks={bookmarks}
-        toggleBookmark={toggleBookmark}
-      />
+    {/* 리스트 */}
+    <RestaurantList
+      restaurants={displayRestaurants}
+      onSelect={setSelectedRestaurant}
+      bookmarks={bookmarks}
+      toggleBookmark={toggleBookmark}
+    />
 
-      {/* 컨트롤 */}
-      <Controls
-        isLoading={isLoading}
-        onLocation={onLocation}
-        radius={radius} setRadius={setRadius}
-        count={count} setCount={setCount}
-        included={included} setIncluded={setIncluded}
-        excluded={excluded} setExcluded={setExcluded}
-        onRandom={onRandom}
-      />
-    </div>
-  );
+    {/* 컨트롤 */}
+    <Controls
+      isLoading={isLoading}
+      onLocation={onLocation}
+      radius={radius}
+      setRadius={setRadius}
+      count={count}
+      setCount={setCount}
+      included={included}
+      setIncluded={setIncluded}
+      excluded={excluded}
+      setExcluded={setExcluded}
+      onRandom={onRandom}
+    />
+  </div>
+);
 }
